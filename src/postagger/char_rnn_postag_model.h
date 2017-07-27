@@ -164,9 +164,6 @@ struct CharacterRNNPostagModel : public PostagModel {
 typedef CharacterRNNPostagModel<dynet::GRUBuilder> CharacterGRUPostagModel;
 typedef CharacterRNNPostagModel<dynet::LSTMBuilder> CharacterLSTMPostagModel;
 
-template<> const char* CharacterGRUPostagModel::name = "CharacterGRUPostagModel";
-template<> const char* CharacterLSTMPostagModel::name = "CharacterLSTMPostagModel";
-
 }
 
 #endif  //  end for __TWPIPE_CHAR_POSTAG_MODEL_H__

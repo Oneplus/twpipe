@@ -6,6 +6,8 @@
 #include "tokenizer/tokenize_model_builder.h"
 #include "tokenizer/tokenizer_trainer.h"
 #include "postagger/postag_model.h"
+#include "postagger/postag_model_builder.h"
+#include "postagger/postagger_trainer.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet.h"
 #include "twpipe/corpus.h"
@@ -91,7 +93,6 @@ int main(int argc, char* argv[]) {
     if (conf["train-tokenizer"].as<bool>() == true) {
       _INFO << "[twpipe] going to train tokenizer.";
       
-      std::string tok_model_name = conf["tok-model-name"].as<std::string>();
       dynet::ParameterCollection model;
 
       twpipe::TokenizeModelBuilder builder(conf, corpus.char_map);
@@ -102,7 +103,17 @@ int main(int argc, char* argv[]) {
       trainer.train(corpus);
     }
     if (conf["train-tagger"].as<bool>() == true) {
+      _INFO << "[twpipe] going to train postagger.";
 
+      dynet::ParameterCollection model;
+
+      twpipe::PostagModelBuilder builder(conf, corpus.char_map, corpus.pos_map);
+      builder.to_json();
+
+      twpipe::PostagModel * engine = builder.build(model);
+      twpipe::PostaggerTrainer trainer(*engine, opt_builder,
+              twpipe::StrEmbeddingType(), conf);
+      trainer.train(corpus);
     }
     if (conf["train-parser"].as<bool>() == true) {
 

@@ -4,6 +4,9 @@
 
 namespace twpipe {
 
+template<> const char* CharacterGRUPostagModel::name = "CharacterGRUPostagModel";
+template<> const char* CharacterLSTMPostagModel::name = "CharacterLSTMPostagModel";
+
 PostagModelBuilder::PostagModelBuilder(po::variables_map & conf,
                                        const Alphabet & char_map,
                                        const Alphabet & pos_map) :
