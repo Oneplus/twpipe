@@ -1,0 +1,15 @@
+add_library (twpipe_utils
+    logging.h
+    logging.cc
+    alphabet.h
+    alphabet.cc
+    corpus.h
+    corpus.cc
+    layer.h
+    layer.cc
+    optimizer_builder.h
+    optimizer_builder.cc
+    trainer.h
+    trainer.cc
+    model.h
+    model.cc)
