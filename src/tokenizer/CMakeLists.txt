@@ -10,3 +10,8 @@ add_library (twpipe_tokenizer
     lin_rnn_tokenize_model.h
     seg_rnn_tokenize_model.h
     )
+
+target_link_libraries (twpipe_tokenizer
+    ${LIBS}
+    dynet
+    twpipe_utils)

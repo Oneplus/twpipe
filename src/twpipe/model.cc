@@ -57,9 +57,9 @@ void Model::to_json(const std::string & phase_name,
 void Model::to_json(const std::string & name,
                     const Alphabet & alphabet) {
   auto & json = payload[kGeneral][name];
-  auto & str_to_id = alphabet.str_to_id;
-  for (auto & it = str_to_id.begin(); it != str_to_id.end(); ++it) {
-    json[it->first] = it->second;
+  const auto & str_to_id = alphabet.str_to_id;
+  for (const auto & it : str_to_id) {
+    json[it.first] = it.second;
   }
 }
 
@@ -93,7 +93,7 @@ std::string Model::from_json(const std::string & phase_name,
 
 void Model::from_json(const std::string & name, Alphabet & alphabet) {
   auto & json = payload[kGeneral][name];
-  for (auto & it = json.begin(); it != json.end(); ++it) {
+  for (auto it = json.begin(); it != json.end(); ++it) {
     alphabet.insert(it.key(), it.value());
   }
 }

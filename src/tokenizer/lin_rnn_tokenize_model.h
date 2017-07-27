@@ -12,10 +12,10 @@ namespace twpipe {
 
 template <class RNNBuilderType>
 struct LinearRNNTokenizeModel : public TokenizeModel {
-  const static unsigned kB = 0;
-  const static unsigned kI = 1;
-  const static unsigned kO = 2;
-  static const char* name;
+  const static unsigned kB;
+  const static unsigned kI;
+  const static unsigned kO;
+  const static char* name;
 
   BiRNNLayer<RNNBuilderType> bi_rnn;
   SymbolEmbedding char_embed;
@@ -142,9 +142,6 @@ struct LinearRNNTokenizeModel : public TokenizeModel {
 
 typedef LinearRNNTokenizeModel<dynet::GRUBuilder> LinearGRUTokenizeModel;
 typedef LinearRNNTokenizeModel<dynet::CoupledLSTMBuilder> LinearLSTMTokenizeModel;
-
-const char* LinearRNNTokenizeModel<dynet::GRUBuilder>::name = "LinearGRUTokenizeModel";
-const char* LinearRNNTokenizeModel<dynet::CoupledLSTMBuilder>::name = "LinearLSTMTokenizeModel";
 
 }
 

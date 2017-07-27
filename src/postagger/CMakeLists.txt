@@ -9,3 +9,8 @@ add_library (twpipe_postagger
     postag_model_builder.cc
     char_rnn_postag_model.h
     )
+
+target_link_libraries (twpipe_postagger
+    ${LIBS}
+    dynet
+    twpipe_utils)

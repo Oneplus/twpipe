@@ -11,7 +11,7 @@ namespace twpipe {
 
 template <class RNNBuilderType>
 struct CharacterRNNPostagModel : public PostagModel {
-  static const char* name;
+  const static char* name;
   BiRNNLayer<RNNBuilderType> char_rnn;
   BiRNNLayer<RNNBuilderType> word_rnn;
   SymbolEmbedding char_embed;
@@ -130,7 +130,7 @@ struct CharacterRNNPostagModel : public PostagModel {
     const InputUnits & input_units = inst.input_units;
     unsigned n_words_w_root = input_units.size();
     unsigned n_words = n_words_w_root - 1;
-    BOOST_ASSERT(n_words == embeddings.size(), "[postag|model] number of dimension not equal.");
+    BOOST_ASSERT_MSG(n_words == embeddings.size(), "[postag|model] number of dimension not equal.");
 
     std::vector<dynet::Expression> word_exprs(n_words);
     std::vector<unsigned> labels(n_words);
@@ -164,8 +164,8 @@ struct CharacterRNNPostagModel : public PostagModel {
 typedef CharacterRNNPostagModel<dynet::GRUBuilder> CharacterGRUPostagModel;
 typedef CharacterRNNPostagModel<dynet::LSTMBuilder> CharacterLSTMPostagModel;
 
-const char* CharacterRNNPostagModel<dynet::GRUBuilder>::name = "CharacterGRUPostagModel";
-const char* CharacterRNNPostagModel<dynet::LSTMBuilder>::name = "CharacterLSTMPostagModel";
+template<> const char* CharacterGRUPostagModel::name = "CharacterGRUPostagModel";
+template<> const char* CharacterLSTMPostagModel::name = "CharacterLSTMPostagModel";
 
 }
 

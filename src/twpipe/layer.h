@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <map>
 #include <set>
+#include <boost/assert.hpp>
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
 #include "dynet/nodes.h"
@@ -69,6 +70,7 @@ struct RNNLayer : public LayerI {
   RNNBuilderType rnn;
   dynet::Parameter p_guard;
   dynet::Expression guard;
+  bool has_guard;
   bool reversed;
 
   RNNLayer(dynet::ParameterCollection& ParameterCollection,
@@ -76,19 +78,20 @@ struct RNNLayer : public LayerI {
            unsigned dim_input,
            unsigned dim_hidden,
            bool rev = false,
-           bool have_guard = true,
+           bool has_guard = true,
            bool trainable = true) :
     LayerI(trainable),
     n_items(0),
     rnn(n_layers, dim_input, dim_hidden, &ParameterCollection),
     p_guard(ParameterCollection.add_parameters({ dim_input, 1 })),
+    has_guard(has_guard),
     reversed(rev) {
   }
 
   void add_inputs(const std::vector<dynet::Expression>& inputs) {
     n_items = inputs.size();
     rnn.start_new_sequence();
-    if (have_guard) { rnn.add_input(guard); }
+    if (has_guard) { rnn.add_input(guard); }
     if (reversed) {
       for (int i = n_items - 1; i >= 0; --i) { rnn.add_input(inputs[i]); }
     } else {
@@ -116,7 +119,7 @@ struct RNNLayer : public LayerI {
       std::cerr << "WARN: not-trainable RNN is not implemented." << std::endl;
     }
     rnn.new_graph(hg);
-    guard = dynet::expr::parameter(hg, p_guard);
+    guard = dynet::parameter(hg, p_guard);
   }
   void set_dropout(float& rate) { rnn.set_dropout(rate); }
   void disable_dropout() { rnn.disable_dropout(); }
@@ -125,7 +128,7 @@ struct RNNLayer : public LayerI {
 template<typename RNNBuilderType>
 struct BiRNNLayer : public LayerI {
   unsigned n_items;
-  bool have_guard;
+  bool has_guard;
   RNNBuilderType fw_rnn;
   RNNBuilderType bw_rnn;
   dynet::Parameter p_fw_guard;
@@ -139,7 +142,7 @@ struct BiRNNLayer : public LayerI {
              unsigned n_layers,
              unsigned dim_input,
              unsigned dim_hidden,
-             bool have_guard = true,
+             bool has_guard = true,
              bool trainable = true) :
     LayerI(trainable),
     n_items(0),
@@ -156,12 +159,12 @@ struct BiRNNLayer : public LayerI {
     fw_hidden.resize(n_items);
     bw_hidden.resize(n_items);
 
-    if (have_guard) { fw_rnn.add_input(fw_guard); }
+    if (has_guard) { fw_rnn.add_input(fw_guard); }
     for (unsigned i = 0; i < n_items; ++i) {
       fw_hidden[i] = fw_rnn.add_input(inputs[i]);
       bw_hidden[n_items - i - 1] = bw_rnn.add_input(inputs[n_items - i - 1]);
     }
-    if (have_guard) { bw_rnn.add_input(bw_guard); }
+    if (has_guard) { bw_rnn.add_input(bw_guard); }
   }
 
   BiRNNOutput get_output(int index) {
@@ -362,7 +365,7 @@ struct SegUniEmbedding {
     len = c.size();
     h.clear(); // The first dimension for h is the starting point, the second is length.
     h.resize(len);
-    dynet::expr::Expression h0 = dynet::expr::parameter(cg, p_h0);
+    dynet::Expression h0 = dynet::parameter(cg, p_h0);
     builder.new_graph(cg);
     for (unsigned i = 0; i < len; ++i) {
       unsigned max_j = i + len;
@@ -432,8 +435,8 @@ struct SegBiEmbedding {
       hi.resize(seg_len);
       for (unsigned k = 0; k < seg_len; ++k) {
         unsigned j = i + k;
-        const dynet::expr::Expression& fe = fwd(i, j);
-        const dynet::expr::Expression& be = bwd(len - 1 - j, len - 1 - i);
+        const dynet::Expression& fe = fwd(i, j);
+        const dynet::Expression& be = bwd(len - 1 - j, len - 1 - i);
         hi[k] = std::make_pair(fe, be);
       }
     }

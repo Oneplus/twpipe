@@ -3,6 +3,13 @@
 
 namespace twpipe {
 
+template<class RNNBuilderType> const unsigned LinearRNNTokenizeModel<RNNBuilderType>::kB = 0;
+template<class RNNBuilderType> const unsigned LinearRNNTokenizeModel<RNNBuilderType>::kI = 1;
+template<class RNNBuilderType> const unsigned LinearRNNTokenizeModel<RNNBuilderType>::kO = 2;
+
+template<> const char* LinearGRUTokenizeModel::name = "LinearGRUTokenizeModel";
+template<> const char* LinearLSTMTokenizeModel::name = "LinearLSTMTokenizeModel";
+
 TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
                                            const Alphabet & char_map) : char_map(char_map) {
   model_name = conf["tok-model-name"].as<std::string>();
