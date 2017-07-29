@@ -28,9 +28,12 @@ struct PostagModel {
   virtual dynet::Expression objective(const Instance & inst,
                                       const std::vector<std::vector<float>> & embeddings) = 0;
 
-  void postag(const std::vector<std::string> & words);
+  void postag(const std::vector<std::string> & words,
+              const std::vector<std::vector<float>> & embeddings);
 
-  void postag(const std::vector<std::string> & words, std::vector<std::string> & tags);
+  void postag(const std::vector<std::string> & words,
+              const std::vector<std::vector<float>> & embeddings,
+              std::vector<std::string> & tags);
 
   std::pair<float, float> evaluate(const std::vector<std::string> & gold,
                                    const std::vector<std::string> & prediction);

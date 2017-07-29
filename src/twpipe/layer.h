@@ -344,9 +344,10 @@ struct Merge6Layer : public LayerI {
 };
 
 template <class RNNBuilderType>
-struct SegUniEmbedding {
+struct SegUniEmbedding : public LayerI {
   // uni-directional segment embedding.
   dynet::Parameter p_h0;
+  dynet::Expression h0;
   RNNBuilderType builder;
   std::vector<std::vector<dynet::Expression>> h;
   unsigned len;
@@ -354,19 +355,27 @@ struct SegUniEmbedding {
   explicit SegUniEmbedding(dynet::ParameterCollection& m,
                            unsigned n_layers,
                            unsigned rnn_input_dim,
-                           unsigned seg_dim) :
+                           unsigned seg_dim,
+                           bool trainable = true) :
+    LayerI(trainable),
     p_h0(m.add_parameters({ rnn_input_dim })),
-    builder(n_layers, rnn_input_dim, seg_dim) {
+    builder(n_layers, rnn_input_dim, seg_dim, m) {
   }
 
-  void construct_chart(dynet::ComputationGraph& cg,
-                       const std::vector<dynet::Expression>& c,
+  void new_graph(dynet::ComputationGraph & cg) {
+    builder.new_graph(cg);
+    if (trainable) {
+      h0 = dynet::parameter(cg, p_h0);
+    } else {
+      h0 = dynet::const_parameter(cg, p_h0);
+    }
+  }
+
+  void construct_chart(const std::vector<dynet::Expression>& c,
                        int max_seg_len = 0) {
     len = c.size();
     h.clear(); // The first dimension for h is the starting point, the second is length.
     h.resize(len);
-    dynet::Expression h0 = dynet::parameter(cg, p_h0);
-    builder.new_graph(cg);
     for (unsigned i = 0; i < len; ++i) {
       unsigned max_j = i + len;
       if (max_seg_len) { max_j = i + max_seg_len; }
@@ -400,7 +409,7 @@ struct SegUniEmbedding {
 };
 
 template <class RNNBuilderType>
-struct SegBiEmbedding {
+struct SegBiEmbedding : public LayerI {
   typedef std::pair<dynet::Expression, dynet::Expression> ExpressionPair;
   SegUniEmbedding<RNNBuilderType> fwd, bwd;
   std::vector<std::vector<ExpressionPair>> h;
@@ -409,20 +418,26 @@ struct SegBiEmbedding {
   explicit SegBiEmbedding(dynet::ParameterCollection& m,
                           unsigned n_layers,
                           unsigned rnn_input_dim,
-                          unsigned seg_dim) :
+                          unsigned seg_dim,
+                          bool trainable = true) :
+    LayerI(trainable),
     fwd(m, n_layers, rnn_input_dim, seg_dim),
     bwd(m, n_layers, rnn_input_dim, seg_dim) {
   }
 
-  void construct_chart(dynet::ComputationGraph& cg,
-                       const std::vector<dynet::Expression>& c,
+  void new_graph(dynet::ComputationGraph & cg) {
+    fwd.new_graph(cg);
+    bwd.new_graph(cg);
+  }
+
+  void construct_chart(const std::vector<dynet::Expression>& c,
                        int max_seg_len = 0) {
     len = c.size();
-    fwd.construct_chart(cg, c, max_seg_len);
+    fwd.construct_chart(c, max_seg_len);
 
     std::vector<dynet::Expression> rc(len);
     for (unsigned i = 0; i < len; ++i) { rc[i] = c[len - i - 1]; }
-    bwd.construct_chart(cg, rc, max_seg_len);
+    bwd.construct_chart(rc, max_seg_len);
 
     h.clear();
     h.resize(len);

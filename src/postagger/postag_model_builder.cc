@@ -44,6 +44,9 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
     engine = new CharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
                                           char_n_layers, embed_dim, word_dim, word_hidden_dim,
                                           word_n_layers, pos_dim, char_map, pos_map);
+  } else {
+    _ERROR << "[postag|model_builder] unknow tokenize model: " << model_name;
+    exit(1);
   }
   return engine;
 }
@@ -70,19 +73,55 @@ PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) 
   Model * globals = Model::get();
   model_name = globals->from_json(Model::kPostaggerName, "name");
   unsigned temp_size;
+
   temp_size = 
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "n-chars"));
   if (char_size == 0) {
     char_size = temp_size;
   } else {
-    BOOST_ASSERT_MSG(char_size == temp_size, "[postag|model_builder] pos-size mismatch!");
+    BOOST_ASSERT_MSG(char_size == temp_size, "[postag|model_builder] char-size mismatch!");
   }
+
+  temp_size =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "n-postags"));
+  if (pos_size == 0) {
+    pos_size = temp_size;
+  } else {
+    BOOST_ASSERT_MSG(pos_size == temp_size, "[postag|model_builder] pos-size mismatch!");
+  }
+
   char_dim =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-dim"));
   char_hidden_dim =
-    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "hidden-dim"));
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-hidden-dim"));
   char_n_layers =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-n-layers"));
+  word_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-dim"));
+  word_hidden_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-hidden-dim"));
+  word_n_layers =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-n-layers"));
+  embed_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "emb-dim"));
+
+  if (model_name == "char-gru") {
+    model_type = kCharacterGRUPostagModel;
+    engine = new CharacterGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                         char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                         word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_name == "bi-lstm") {
+    model_type = kCharacterLSTMPostagModel;
+    engine = new CharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                          char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                          word_n_layers, pos_dim, char_map, pos_map);
+  } else {
+    _ERROR << "[postag|model_builder] unknow tokenize model: " << model_name;
+    exit(1);
+  }
+
+  globals->from_json(Model::kPostaggerName, model);
+  
   return engine;
 }
 

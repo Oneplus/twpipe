@@ -18,7 +18,7 @@ struct CharacterRNNPostagModel : public PostagModel {
   SymbolEmbedding pos_embed;
   InputLayer embed_input;
   Merge3Layer merge_input;
-  Merge2Layer merge;
+  Merge3Layer merge;
   DenseLayer dense;
 
   unsigned char_size;
@@ -29,6 +29,7 @@ struct CharacterRNNPostagModel : public PostagModel {
   unsigned word_hidden_dim;
   unsigned word_n_layers;
   unsigned pos_dim;
+  unsigned root_pos_id;
 
   const Alphabet & char_map;
 
@@ -51,7 +52,7 @@ struct CharacterRNNPostagModel : public PostagModel {
     pos_embed(model, pos_map.size(), pos_dim),
     embed_input(embed_dim),
     merge_input(model, char_hidden_dim, char_hidden_dim, embed_dim, word_dim),
-    merge(model, word_hidden_dim, word_hidden_dim, word_hidden_dim),
+    merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
     dense(model, word_hidden_dim, pos_map.size()),
     char_size(char_size),
     char_dim(char_dim),
@@ -72,6 +73,8 @@ struct CharacterRNNPostagModel : public PostagModel {
     _INFO << "[postag|model] word rnn hidden dimension = " << word_hidden_dim;
     _INFO << "[postag|model] word rnn number layers = " << word_n_layers;
     _INFO << "[postag|model] postag hidden dimension = " << pos_dim;
+
+    root_pos_id = pos_map.get(Corpus::ROOT);
   }
 
   void new_graph(dynet::ComputationGraph & cg) {
@@ -79,6 +82,7 @@ struct CharacterRNNPostagModel : public PostagModel {
     word_rnn.new_graph(cg);
     char_embed.new_graph(cg);
     pos_embed.new_graph(cg);
+    embed_input.new_graph(cg);
     merge_input.new_graph(cg);
     merge.new_graph(cg);
     dense.new_graph(cg);
@@ -115,13 +119,17 @@ struct CharacterRNNPostagModel : public PostagModel {
 
     word_rnn.add_inputs(word_exprs);
     tags.resize(n_words);
+    unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
       auto payload = word_rnn.get_output(i);
-      dynet::Expression logits = dense.get_output(dynet::rectify(merge.get_output(payload.first, payload.second)));
+      dynet::Expression logits = dense.get_output(dynet::rectify(
+        merge.get_output(payload.first, payload.second, pos_embed.embed(prev_label))
+      ));
       std::vector<float> scores = dynet::as_vector((char_embed.cg)->get_value(logits));
       unsigned label = std::max_element(scores.begin(), scores.end()) - scores.begin();
 
       tags[i] = pos_map.get(label);
+      prev_label = label;
     }
   }
 
@@ -151,10 +159,14 @@ struct CharacterRNNPostagModel : public PostagModel {
 
     word_rnn.add_inputs(word_exprs);
     std::vector<dynet::Expression> losses(n_words);
+    unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
       auto payload = word_rnn.get_output(i);
-      dynet::Expression logits = dense.get_output(dynet::rectify(merge.get_output(payload.first, payload.second)));
+      dynet::Expression logits = dense.get_output(dynet::rectify(
+        merge.get_output(payload.first, payload.second, pos_embed.embed(prev_label))
+      ));
       losses[i] = dynet::pickneglogsoftmax(logits, labels[i]);
+      prev_label = labels[i];
     }
 
     return dynet::sum(losses);

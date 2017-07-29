@@ -1,4 +1,6 @@
 #include "tokenize_model_builder.h"
+#include "lin_rnn_tokenize_model.h"
+#include "seg_rnn_tokenize_model.h"
 #include "twpipe/logging.h"
 
 namespace twpipe {
@@ -9,6 +11,8 @@ template<class RNNBuilderType> const unsigned LinearRNNTokenizeModel<RNNBuilderT
 
 template<> const char* LinearGRUTokenizeModel::name = "LinearGRUTokenizeModel";
 template<> const char* LinearLSTMTokenizeModel::name = "LinearLSTMTokenizeModel";
+template<> const char* SegmentalGRUTokenizeModel::name = "SegmentalGRUTokenizeModel";
+template<> const char* SegmentalLSTMTokenizeModel::name = "SegmentalLSTMTokenizeModel";
 
 TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
                                            const Alphabet & char_map) : char_map(char_map) {
@@ -30,6 +34,8 @@ TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
   char_dim = (conf.count("tok-char-dim") ? conf["tok-char-dim"].as<unsigned>() : 0);
   hidden_dim = (conf.count("tok-hidden-dim") ? conf["tok-hidden-dim"].as<unsigned>() : 0);
   n_layers = (conf.count("tok-n-layer") ? conf["tok-n-layer"].as<unsigned>() : 0);
+  seg_dim = (conf.count("tok-seg-dim") ? conf["tok-seg-dim"].as<unsigned>() : 0);
+  dur_dim = (conf.count("tok-dur-dim") ? conf["tok-dur-dim"].as<unsigned>() : 0);
 }
 
 TokenizeModel * TokenizeModelBuilder::build(dynet::ParameterCollection & model) {
@@ -41,11 +47,11 @@ TokenizeModel * TokenizeModelBuilder::build(dynet::ParameterCollection & model) 
     engine = new LinearLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
                                          char_map);
   } else if (model_type == kSegmentalGRUTokenizeModel) {
-    BOOST_ASSERT_MSG(false, "SegmentalRNN not implemented.");
-    // model = new twpipe::SegmentalRNNTokenizeModel(conf);
+    engine = new SegmentalGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
+                                           seg_dim, dur_dim, char_map);
   } else if (model_type == kSegmentalLSTMTokenizeModel) {
-    BOOST_ASSERT_MSG(false, "SegmentalRNN not implemented.");
-    // model = new twpipe::SegmentalRNNTokenizeModel(conf);
+    engine = new SegmentalLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
+                                            seg_dim, dur_dim, char_map);
   } else {
     _ERROR << "[tokenize|model_builder] Unknown tokenize model: " << model_name;
     exit(1);
@@ -60,7 +66,9 @@ void TokenizeModelBuilder::to_json() {
     { "n-chars", boost::lexical_cast<std::string>(char_size) },
     { "char-dim", boost::lexical_cast<std::string>(char_dim) },
     { "hidden-dim", boost::lexical_cast<std::string>(hidden_dim) },
-    { "n-layers", boost::lexical_cast<std::string>(n_layers) }
+    { "n-layers", boost::lexical_cast<std::string>(n_layers) },
+    { "seg-dim", boost::lexical_cast<std::string>(seg_dim) },
+    { "dur-dim", boost::lexical_cast<std::string>(dur_dim) }
   });
 }
 

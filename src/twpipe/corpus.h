@@ -5,18 +5,19 @@
 #include <vector>
 #include <set>
 #include <boost/regex.hpp>
+#include <boost/program_options.hpp>
 #include "alphabet.h"
+
+namespace po = boost::program_options;
 
 namespace twpipe {
 
 struct InputUnit {
   std::vector<unsigned> cids;  // list of character ID
   unsigned wid;     // form ID
-  unsigned nid;     // normalized form ID
   unsigned pid;     // postag ID
   unsigned aux_wid; // copy of form ID
   std::string word;
-  std::string norm_word;
   std::string lemma;
   std::string feature;
 };
@@ -48,6 +49,23 @@ unsigned utf8_len(unsigned char x);
 typedef std::unordered_map<unsigned, std::vector<float> > IntEmbeddingType;
 typedef std::unordered_map<std::string, std::vector<float> > StrEmbeddingType;
 
+struct Normalizer {
+  static boost::regex url_regex;
+  static boost::regex user_regex;
+  static boost::regex smile_regex;
+  static boost::regex lolface_regex;
+  static boost::regex sadface_regex;
+  static boost::regex neuralface_regex;
+  static boost::regex heart_regex;
+  static boost::regex number_regex;
+  static boost::regex repeat_regex;
+  static boost::regex elong_regex;
+
+  // dealing with username, url, emoticon, expressive lengthening
+  // match with the glove normalization process.
+  static std::string normalize(const std::string & word);
+};
+
 struct Corpus {
   const static char* UNK;
   const static char* BAD0;
@@ -59,8 +77,9 @@ struct Corpus {
   unsigned n_train;
   unsigned n_devel;
 
+  static po::options_description get_options();
+
   Alphabet word_map;  //  alphabet of word
-  Alphabet norm_map;  //  alphabet of normalized word
   Alphabet char_map;  //  alphabet of characters
   Alphabet pos_map;   //  alphabet of postag
   Alphabet deprel_map;
@@ -71,22 +90,7 @@ struct Corpus {
   std::set<unsigned> training_vocab;
   std::unordered_map<unsigned, unsigned> counter;
 
-  boost::regex url_regex;
-  boost::regex user_regex;
-  boost::regex smile_regex;
-  boost::regex lolface_regex;
-  boost::regex sadface_regex;
-  boost::regex neuralface_regex;
-  boost::regex heart_regex;
-  boost::regex number_regex;
-  boost::regex repeat_regex;
-  boost::regex elong_regex;
-
   Corpus();
-
-  // dealing with username, url, emoticon, expressive lengthening
-  // match with the glove normalization process.
-  std::string normalize(const std::string & word) const;
 
   void load_training_data(const std::string& filename);
 
@@ -118,7 +122,12 @@ void load_word_embeddings(const std::string& embedding_file,
                           StrEmbeddingType & pretrained);
 
 void load_empty_embeddings(unsigned pretrained_dim,
-                           IntEmbeddingType & pretrained);
+                           StrEmbeddingType & pretrained);
+
+void get_embeddings(const std::vector<std::string> & words,
+                    const StrEmbeddingType & pretrained,
+                    unsigned dim,
+                    std::vector<std::vector<float>> & values);
 
 }
 

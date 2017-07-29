@@ -47,19 +47,15 @@ void vector_to_parse(const std::vector<unsigned>& heads,
   }
 }
 
-Corpus::Corpus() :
-  n_train(0),
-  n_devel(0),
-  url_regex("https?:\\/\\/(\\S+|www\\.(\\w+\\.)+\\S*)"),
-  user_regex("@\\w+"),
-  smile_regex("[8:=;]['`\\\\-]?[)d]+|[)d]+['`\\\\-]?[8:=;]"),
-  lolface_regex("[8:=;]['`\\\\-]?p+"),
-  sadface_regex("[8:=;]['`\\\\-]?\\(+|\\)+['`\\\\-]?[8:=;]"),
-  neuralface_regex("[8:=;]['`\\\\-]?[\\/|l*]"),
-  number_regex("^[-+]?[.\\d]*[\\d]+[:,.\\d]*$"),
-  heart_regex("<3"),
-  repeat_regex("([!?.]){2,}+"),
-  elong_regex("(\\S*?)(\\w)\\2{2,}") {
+po::options_description Corpus::get_options() {
+  po::options_description embed_opts("Embedding options");
+  embed_opts.add_options()
+    ("embedding", po::value<std::string>(), "the path to the embedding file.")
+    ("embedding-dim", po::value<unsigned>()->default_value(100), "the dimension of embedding.")
+    ;
+  return embed_opts;
+
+  return po::options_description();
 }
 
 std::string _repeat(const boost::smatch & what) {
@@ -70,7 +66,18 @@ std::string _elong(const boost::smatch & what) {
   return what[1].str() + what[2].str();
 }
 
-std::string Corpus::normalize(const std::string & word) const {
+boost::regex Normalizer::url_regex("https?:\\/\\/(\\S+|www\\.(\\w+\\.)+\\S*)");
+boost::regex Normalizer::user_regex("@\\w+");
+boost::regex Normalizer::smile_regex("[8:=;]['`\\\\-]?[)d]+|[)d]+['`\\\\-]?[8:=;]");
+boost::regex Normalizer::lolface_regex("[8:=;]['`\\\\-]?p+");
+boost::regex Normalizer::sadface_regex("[8:=;]['`\\\\-]?\\(+|\\)+['`\\\\-]?[8:=;]");
+boost::regex Normalizer::neuralface_regex("[8:=;]['`\\\\-]?[\\/|l*]");
+boost::regex Normalizer::number_regex("^[-+]?[.\\d]*[\\d]+[:,.\\d]*$");
+boost::regex Normalizer::heart_regex("<3");
+boost::regex Normalizer::repeat_regex("([!?.]){2,}+");
+boost::regex Normalizer::elong_regex("(\\S*?)(\\w)\\2{2,}");
+
+std::string Normalizer::normalize(const std::string & word) {
   std::string ret = word;
   ret = boost::regex_replace(ret, url_regex, "<url>");
   ret = boost::regex_replace(ret, user_regex, "<user>");
@@ -86,16 +93,17 @@ std::string Corpus::normalize(const std::string & word) const {
   return ret;
 }
 
+Corpus::Corpus() :
+  n_train(0),
+  n_devel(0) {
+}
+
 void Corpus::load_training_data(const std::string& filename) {
   _INFO << "[corpus] reading training data from: " << filename;
 
   word_map.insert(Corpus::BAD0);
   word_map.insert(Corpus::UNK);
   word_map.insert(Corpus::ROOT);
-
-  norm_map.insert(Corpus::BAD0);
-  norm_map.insert(Corpus::UNK);
-  norm_map.insert(Corpus::ROOT);
 
   char_map.insert(Corpus::BAD0);
   char_map.insert(Corpus::UNK);
@@ -182,11 +190,9 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
 
   // dummy root at first.
   input_unit.wid = word_map.get(ROOT);
-  input_unit.nid = norm_map.get(ROOT);
   input_unit.pid = pos_map.get(ROOT);
   input_unit.aux_wid = input_unit.wid;
   input_unit.word = ROOT;
-  input_unit.norm_word = ROOT;
   input_unit.lemma = ROOT;
   input_unit.feature = ROOT;
   inst.input_units.push_back(input_unit);
@@ -207,13 +213,10 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
       
       if (train) {
         const std::string & word = input_unit.word = tokens[1];
-        const std::string & norm = input_unit.norm_word = normalize(word);
         input_unit.lemma = tokens[2];
         input_unit.feature = tokens[5];
 
         input_unit.wid = word_map.insert(word);
-        // norm_map should be fix.
-        input_unit.nid = (norm_map.contains(norm) ? norm_map.get(norm) : norm_map.get(Corpus::UNK));
         input_unit.pid = pos_map.insert(tokens[3]);
         input_unit.aux_wid = input_unit.wid;
 
@@ -231,12 +234,10 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
         inst.parse_units.push_back(parse_unit);
       } else {
         const std::string & word = input_unit.word = tokens[1];
-        const std::string & norm = input_unit.norm_word = normalize(word);
         input_unit.lemma = tokens[2];
         input_unit.feature = tokens[5];
 
         input_unit.wid = (word_map.contains(word) ? word_map.get(word) : word_map.get(UNK));
-        input_unit.nid = (norm_map.contains(norm) ? norm_map.get(norm) : norm_map.get(UNK));
         input_unit.pid = pos_map.get(tokens[3]);
         input_unit.aux_wid = input_unit.wid;
 
@@ -274,7 +275,6 @@ unsigned Corpus::get_or_add_word(const std::string& word) {
 
 void Corpus::stat() {
   _INFO << "[corpus] # of words = " << word_map.size();
-  _INFO << "[corpus] # of norm = " << norm_map.size();
   _INFO << "[corpus] # of char = " << char_map.size();
   _INFO << "[corpus] # of pos = " << pos_map.size();
   _INFO << "[corpus] # of deprel = " << deprel_map.size();
@@ -354,6 +354,19 @@ void load_empty_embeddings(unsigned pretrained_dim,
   pretrained[Corpus::UNK] = std::vector<float>(pretrained_dim, 0.);
   pretrained[Corpus::ROOT] = std::vector<float>(pretrained_dim, 0.);
   _INFO << "[corpus] loaded embedding " << pretrained.size() << " entries.";
+}
+
+void get_embeddings(const std::vector<std::string>& words,
+                    const StrEmbeddingType & pretrained,
+                    unsigned dim,
+                    std::vector<std::vector<float>>& values) {
+  values.clear();
+  for (const auto & word : words) {
+    auto it = pretrained.find(Normalizer::normalize(word));
+    values.push_back(it == pretrained.end() ?
+                     std::vector<float>(dim, 0.) :
+                     it->second);
+  }
 }
 
 

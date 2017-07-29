@@ -2,8 +2,7 @@
 #define __TWPIPE_TOKENIZE_MODEL_BUILDER_H__
 
 #include <boost/program_options.hpp>
-#include "lin_rnn_tokenize_model.h"
-#include "seg_rnn_tokenize_model.h"
+#include "tokenize_model.h"
 
 namespace po = boost::program_options;
 
@@ -24,6 +23,8 @@ struct TokenizeModelBuilder {
   unsigned char_dim;
   unsigned hidden_dim;
   unsigned n_layers;
+  unsigned seg_dim;
+  unsigned dur_dim;
 
   TokenizeModelBuilder(po::variables_map & conf, const Alphabet & char_map);
 

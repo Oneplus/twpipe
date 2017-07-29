@@ -39,11 +39,12 @@ void PostaggerTrainer::train(const Corpus & corpus) {
 
       dynet::ComputationGraph cg;
       engine.new_graph(cg);
+      std::vector<std::string> words;
       std::vector<std::vector<float>> values;
       for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        auto it = embeddings.find(inst.input_units[i].norm_word);
-        values.push_back(it == embeddings.end() ? std::vector<float>(dim, 0.) : it->second);
+        words.push_back(inst.input_units[i].word);
       }
+      get_embeddings(words, embeddings, dim, values);
       dynet::Expression loss_expr = engine.objective(inst, values);
       float l = dynet::as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
@@ -60,29 +61,30 @@ void PostaggerTrainer::train(const Corpus & corpus) {
       dynet::ComputationGraph cg;
       engine.new_graph(cg);
       std::vector<std::string> words;
-      std::vector<std::string> result;
+      std::vector<std::string> gold_postags;
+      std::vector<std::string> pred_postags;
       std::vector<std::vector<float>> values;
       for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        auto it = embeddings.find(inst.input_units[i].norm_word);
         words.push_back(inst.input_units[i].word);
-        values.push_back(it == embeddings.end() ? std::vector<float>(dim, 0.) : it->second);
+        gold_postags.push_back(corpus.pos_map.get(inst.input_units[i].pid));
       }
-      engine.decode(words, values, result);
-      auto payload = engine.evaluate(words, result);
+      get_embeddings(words, embeddings, dim, values);
+      engine.decode(words, values, pred_postags);
+      auto payload = engine.evaluate(gold_postags, pred_postags);
 
       n_recall += payload.first;
       n_total += payload.second;
-
-      float acc = n_recall / n_total;
-      _INFO << "[postag|train] iteration " << iter << ", accuracy = " << acc;
-    
-      if (acc > best_acc) {
-        best_acc = acc;
-        _INFO << "[postag|train] new record achieved " << best_acc << ", model saved.";
-        Model::get()->to_json(Model::kPostaggerName, engine.model);
-      }
-      trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
     }
+ 
+    float acc = n_recall / n_total;
+    _INFO << "[postag|train] iteration " << iter << ", accuracy = " << acc;
+
+    if (acc > best_acc) {
+      best_acc = acc;
+      _INFO << "[postag|train] new record achieved " << best_acc << ", model saved.";
+      Model::get()->to_json(Model::kPostaggerName, engine.model);
+    }
+    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
   }
 
   delete trainer;
