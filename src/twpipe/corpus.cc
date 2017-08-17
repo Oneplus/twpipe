@@ -47,52 +47,6 @@ void vector_to_parse(const std::vector<unsigned>& heads,
   }
 }
 
-po::options_description Corpus::get_options() {
-  po::options_description embed_opts("Embedding options");
-  embed_opts.add_options()
-    ("embedding", po::value<std::string>(), "the path to the embedding file.")
-    ("embedding-dim", po::value<unsigned>()->default_value(100), "the dimension of embedding.")
-    ;
-  return embed_opts;
-
-  return po::options_description();
-}
-
-std::string _repeat(const boost::smatch & what) {
-  return what[1].str();
-}
-
-std::string _elong(const boost::smatch & what) {
-  return what[1].str() + what[2].str();
-}
-
-boost::regex Normalizer::url_regex("https?:\\/\\/(\\S+|www\\.(\\w+\\.)+\\S*)");
-boost::regex Normalizer::user_regex("@\\w+");
-boost::regex Normalizer::smile_regex("[8:=;]['`\\\\-]?[)d]+|[)d]+['`\\\\-]?[8:=;]");
-boost::regex Normalizer::lolface_regex("[8:=;]['`\\\\-]?p+");
-boost::regex Normalizer::sadface_regex("[8:=;]['`\\\\-]?\\(+|\\)+['`\\\\-]?[8:=;]");
-boost::regex Normalizer::neuralface_regex("[8:=;]['`\\\\-]?[\\/|l*]");
-boost::regex Normalizer::number_regex("^[-+]?[.\\d]*[\\d]+[:,.\\d]*$");
-boost::regex Normalizer::heart_regex("<3");
-boost::regex Normalizer::repeat_regex("([!?.]){2,}+");
-boost::regex Normalizer::elong_regex("(\\S*?)(\\w)\\2{2,}");
-
-std::string Normalizer::normalize(const std::string & word) {
-  std::string ret = word;
-  ret = boost::regex_replace(ret, url_regex, "<url>");
-  ret = boost::regex_replace(ret, user_regex, "<user>");
-  ret = boost::regex_replace(ret, smile_regex, "<smile>");
-  ret = boost::regex_replace(ret, lolface_regex, "<lolface>");
-  ret = boost::regex_replace(ret, sadface_regex, "<sadface>");
-  ret = boost::regex_replace(ret, neuralface_regex, "<neutralface>");
-  ret = boost::regex_replace(ret, heart_regex, "<heart>");
-  ret = boost::regex_replace(ret, number_regex, "<number>");
-  ret = boost::regex_replace(ret, repeat_regex, _repeat, boost::match_default | boost::format_all);
-  ret = boost::regex_replace(ret, elong_regex, _elong);
-  boost::to_lower(ret);
-  return ret;
-}
-
 Corpus::Corpus() :
   n_train(0),
   n_devel(0) {
@@ -286,86 +240,6 @@ void Corpus::get_vocabulary_and_word_count() {
       training_vocab.insert(item.wid);
       ++counter[item.wid];
     }
-  }
-}
-
-void load_word_embeddings(const std::string & embedding_file,
-                          unsigned pretrained_dim,
-                          IntEmbeddingType & pretrained,
-                          Alphabet & norm_map) {
-  pretrained[norm_map.insert(Corpus::BAD0)] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[norm_map.insert(Corpus::UNK)] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[norm_map.insert(Corpus::ROOT)] = std::vector<float>(pretrained_dim, 0.);
-  _INFO << "[corpus] loading from " << embedding_file << " with " << pretrained_dim << " dimensions.";
-  std::ifstream ifs(embedding_file);
-  BOOST_ASSERT_MSG(ifs, "Failed to load embedding file.");
-  std::string line;
-  // get the header in word2vec styled embedding.
-  std::getline(ifs, line);
-  std::vector<float> v(pretrained_dim, 0.);
-  std::string word;
-  while (std::getline(ifs, line)) {
-    std::istringstream iss(line);
-    iss >> word;
-    // actually, there should be a checking about the embedding dimension.
-    for (unsigned i = 0; i < pretrained_dim; ++i) { iss >> v[i]; }
-    unsigned id = norm_map.insert(word);
-    pretrained[id] = v;
-  }
-  _INFO << "[corpus] loaded embedding " << pretrained.size() << " entries.";
-}
-
-void load_empty_embeddings(unsigned pretrained_dim,
-                           IntEmbeddingType & pretrained,
-                           Alphabet & norm_map) {
-  pretrained[norm_map.insert(Corpus::BAD0)] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[norm_map.insert(Corpus::UNK)] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[norm_map.insert(Corpus::ROOT)] = std::vector<float>(pretrained_dim, 0.);
-  _INFO << "[corpus] loaded embedding " << pretrained.size() << " entries.";
-}
-
-void load_word_embeddings(const std::string & embedding_file,
-                          unsigned pretrained_dim,
-                          StrEmbeddingType & pretrained) {
-  pretrained[Corpus::BAD0] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[Corpus::UNK] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[Corpus::ROOT] = std::vector<float>(pretrained_dim, 0.);
-  _INFO << "[corpus] loading from " << embedding_file << " with " << pretrained_dim << " dimensions.";
-  std::ifstream ifs(embedding_file);
-  BOOST_ASSERT_MSG(ifs, "Failed to load embedding file.");
-  std::string line;
-  // get the header in word2vec styled embedding.
-  std::getline(ifs, line);
-  std::vector<float> v(pretrained_dim, 0.);
-  std::string word;
-  while (std::getline(ifs, line)) {
-    std::istringstream iss(line);
-    iss >> word;
-    // actually, there should be a checking about the embedding dimension.
-    for (unsigned i = 0; i < pretrained_dim; ++i) { iss >> v[i]; }
-    pretrained[word] = v;
-  }
-  _INFO << "[corpus] loaded embedding " << pretrained.size() << " entries.";
-}
-
-void load_empty_embeddings(unsigned pretrained_dim,
-                           StrEmbeddingType & pretrained) {
-  pretrained[Corpus::BAD0] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[Corpus::UNK] = std::vector<float>(pretrained_dim, 0.);
-  pretrained[Corpus::ROOT] = std::vector<float>(pretrained_dim, 0.);
-  _INFO << "[corpus] loaded embedding " << pretrained.size() << " entries.";
-}
-
-void get_embeddings(const std::vector<std::string>& words,
-                    const StrEmbeddingType & pretrained,
-                    unsigned dim,
-                    std::vector<std::vector<float>>& values) {
-  values.clear();
-  for (const auto & word : words) {
-    auto it = pretrained.find(Normalizer::normalize(word));
-    values.push_back(it == pretrained.end() ?
-                     std::vector<float>(dim, 0.) :
-                     it->second);
   }
 }
 

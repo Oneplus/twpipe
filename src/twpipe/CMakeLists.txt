@@ -12,4 +12,11 @@ add_library (twpipe_utils
     trainer.h
     trainer.cc
     model.h
-    model.cc)
+    model.cc
+    embedding.h
+    embedding.cc
+    cluster.h
+    cluster.cc
+    normalizer.h
+    normalizer.cc
+    )

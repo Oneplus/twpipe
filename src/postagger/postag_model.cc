@@ -8,10 +8,12 @@ po::options_description PostagModel::get_options() {
     ("pos-model-name", po::value<std::string>()->default_value("char-gru"), "the model name [char-gru|char-lstm].")
     ("pos-char-dim", po::value<unsigned>()->default_value(64), "the character embedding dimension.")
     ("pos-char-hidden-dim", po::value<unsigned>()->default_value(64), "the hidden dimension of char-rnn.")
-    ("pos-char-n-layer", po::value<unsigned>()->default_value(1), "the number of character lstm layers.")
-    ("pos-word-dim", po::value<unsigned>()->default_value(128), "the character embedding dimension.")
-    ("pos-word-hidden-dim", po::value<unsigned>()->default_value(128), "the hidden dimension of char-rnn.")
-    ("pos-word-n-layer", po::value<unsigned>()->default_value(1), "the number of word lstm layers.")
+    ("pos-char-n-layer", po::value<unsigned>()->default_value(1), "the number of layers of char-rnn.")
+    ("pos-word-hidden-dim", po::value<unsigned>()->default_value(128), "the hidden dimension of word-rnn.")
+    ("pos-word-n-layer", po::value<unsigned>()->default_value(1), "the number of layers of word-rnn.")
+    ("pos-cluster-dim", po::value<unsigned>()->default_value(8), "the cluster bit embedding dimension.")
+    ("pos-cluster-n-layer", po::value<unsigned>()->default_value(1), "the number of layers for cluster-rnn.")
+    ("pos-cluster-hidden-dim", po::value<unsigned>()->default_value(8), "the hidden dimension of cluster-nn.")
     ("pos-pos-dim", po::value<unsigned>()->default_value(32), "the dimension of postag.")
     ;
   return model_opts;
@@ -24,10 +26,9 @@ PostagModel::PostagModel(dynet::ParameterCollection & model,
   pos_size(pos_map.size()) {
 }
 
-void PostagModel::postag(const std::vector<std::string>& words,
-                         const std::vector<std::vector<float>> & embeddings) {
+void PostagModel::postag(const std::vector<std::string>& words) {
   std::vector<std::string> tags;
-  postag(words, embeddings, tags);
+  postag(words, tags);
   
   for (unsigned i = 0; i < words.size(); ++i) {
     std::cout << i + 1 << "\t" << words[i] << "\t_\t"
@@ -37,11 +38,10 @@ void PostagModel::postag(const std::vector<std::string>& words,
 }
 
 void PostagModel::postag(const std::vector<std::string>& words,
-                         const std::vector<std::vector<float>> & embeddings,
                          std::vector<std::string>& tags) {
   dynet::ComputationGraph cg;
   new_graph(cg);
-  decode(words, embeddings, tags);
+  decode(words, tags);
 }
 
 std::pair<float, float> PostagModel::evaluate(const std::vector<std::string>& gold,

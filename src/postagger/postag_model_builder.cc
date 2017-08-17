@@ -6,6 +6,10 @@ namespace twpipe {
 
 template<> const char* CharacterGRUPostagModel::name = "CharacterGRUPostagModel";
 template<> const char* CharacterLSTMPostagModel::name = "CharacterLSTMPostagModel";
+template<> const char* CharacterGRUCRFPostagModel::name = "CharacterGRUCRFPostagModel";
+template<> const char* CharacterLSTMCRFPostagModel::name = "CharacterLSTMCRFPostagModel";
+template<> const char* CharacterGRUWithClusterPostagModel::name = "CharacterGRUWithClusterPostagModel";
+template<> const char* CharacterLSTMWithClusterPostagModel::name = "CharacterLSTMWithClusterPostagModel";
 
 PostagModelBuilder::PostagModelBuilder(po::variables_map & conf,
                                        const Alphabet & char_map,
@@ -18,8 +22,16 @@ PostagModelBuilder::PostagModelBuilder(po::variables_map & conf,
     model_type = kCharacterGRUPostagModel;
   } else if (model_name == "char-lstm") {
     model_type = kCharacterLSTMPostagModel;
+  } else if (model_name == "char-gru-crf") {
+    model_type = kCharacterGRUPostagCRFModel;
+  } else if (model_name == "char-lstm-crf") {
+    model_type = kCharacterLSTMPostagCRFModel;
+  } else if (model_name == "char-gru-wcluster") {
+    model_type = kCharacterClusterGRUPostagModel;
+  } else if (model_name == "char-lstm-wcluster") {
+    model_type = kCharacterClusterLSTMPostagModel;
   } else {
-    _ERROR << "[postag|model_builder] unknow postaag model: " << model_name;
+    _ERROR << "[postag|model_builder] unknow postag model: " << model_name;
   }
 
   char_size = char_map.size();
@@ -27,9 +39,11 @@ PostagModelBuilder::PostagModelBuilder(po::variables_map & conf,
   char_dim = (conf.count("pos-char-dim") ? conf["pos-char-dim"].as<unsigned>() : 0);
   char_hidden_dim = (conf.count("pos-char-hidden-dim") ? conf["pos-char-hidden-dim"].as<unsigned>() : 0);
   char_n_layers = (conf.count("pos-char-n-layer") ? conf["pos-char-n-layer"].as<unsigned>() : 0);
-  word_dim = (conf.count("pos-word-dim") ? conf["pos-word-dim"].as<unsigned>() : 0);
   word_hidden_dim = (conf.count("pos-word-hidden-dim") ? conf["pos-word-hidden-dim"].as<unsigned>() : 0);
   word_n_layers = (conf.count("pos-word-n-layer") ? conf["pos-word-n-layer"].as<unsigned>() : 0);
+  cluster_dim = (conf.count("pos-cluster-dim") ? conf["pos-cluster-dim"].as<unsigned>() : 0);
+  cluster_hidden_dim = (conf.count("pos-cluster-hidden-dim") ? conf["pos-cluster-hidden-dim"].as<unsigned>() : 0);
+  cluster_n_layers = (conf.count("pos-cluster-n-layer") ? conf["pos-cluster-n-layer"].as<unsigned>() : 0);
   pos_dim = (conf.count("pos-pos-dim") ? conf["pos-pos-dim"].as<unsigned>() : 0);
   embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
 }
@@ -38,14 +52,32 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
   PostagModel * engine = nullptr;
   if (model_type == kCharacterGRUPostagModel) {
     engine = new CharacterGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
-                                         char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                         char_n_layers, embed_dim, word_hidden_dim,
                                          word_n_layers, pos_dim, char_map, pos_map);
   } else if (model_type == kCharacterLSTMPostagModel) {
     engine = new CharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
-                                          char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                          char_n_layers, embed_dim, word_hidden_dim,
                                           word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_type == kCharacterGRUPostagCRFModel) {
+    engine = new CharacterGRUCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                            char_n_layers, embed_dim, word_hidden_dim,
+                                            word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_type == kCharacterLSTMPostagCRFModel) {
+    engine = new CharacterLSTMCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                             char_n_layers, embed_dim, word_hidden_dim,
+                                             word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_type == kCharacterClusterGRUPostagModel) {
+    engine = new CharacterGRUWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                                    char_n_layers, embed_dim, word_hidden_dim,
+                                                    word_n_layers, cluster_dim, cluster_hidden_dim,
+                                                    cluster_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_type == kCharacterClusterLSTMPostagModel) {
+    engine = new CharacterLSTMWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                                     char_n_layers, embed_dim, word_hidden_dim,
+                                                     word_n_layers, cluster_dim, cluster_hidden_dim,
+                                                     cluster_n_layers, pos_dim, char_map, pos_map);
   } else {
-    _ERROR << "[postag|model_builder] unknow tokenize model: " << model_name;
+    _ERROR << "[postag|model_builder] unknow postag model: " << model_name;
     exit(1);
   }
   return engine;
@@ -58,13 +90,21 @@ void PostagModelBuilder::to_json() {
     {"char-dim", boost::lexical_cast<std::string>(char_dim)},
     {"char-hidden-dim", boost::lexical_cast<std::string>(char_hidden_dim)},
     {"char-n-layers", boost::lexical_cast<std::string>(char_n_layers)},
-    {"word-dim", boost::lexical_cast<std::string>(word_dim)},
     {"word-hidden-dim", boost::lexical_cast<std::string>(word_hidden_dim)},
     {"word-n-layers", boost::lexical_cast<std::string>(word_n_layers)},
     {"pos-dim", boost::lexical_cast<std::string>(pos_dim)},
     {"n-postags", boost::lexical_cast<std::string>(pos_size)},
     {"emb-dim", boost::lexical_cast<std::string>(embed_dim)}
   });
+
+  if (model_type == kCharacterClusterGRUPostagModel ||
+      model_type == kCharacterClusterLSTMPostagModel) {
+    Model::get()->to_json(Model::kPostaggerName, {
+      {"cluster-dim", boost::lexical_cast<std::string>(char_dim)},
+      {"cluster-hidden-dim", boost::lexical_cast<std::string>(char_hidden_dim)},
+      {"cluster-n-layers", boost::lexical_cast<std::string>(char_n_layers)},
+    });
+  }
 }
 
 PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) {
@@ -96,27 +136,55 @@ PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) 
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-hidden-dim"));
   char_n_layers =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-n-layers"));
-  word_dim =
-    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-dim"));
   word_hidden_dim =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-hidden-dim"));
   word_n_layers =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "word-n-layers"));
+  cluster_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "cluster-dim"));
+  cluster_hidden_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "cluster-hidden-dim"));
+  cluster_n_layers =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "cluster-n-layers"));
+  pos_dim =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "pos-dim"));
   embed_dim =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "emb-dim"));
 
   if (model_name == "char-gru") {
     model_type = kCharacterGRUPostagModel;
     engine = new CharacterGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
-                                         char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                         char_n_layers, embed_dim, word_hidden_dim,
                                          word_n_layers, pos_dim, char_map, pos_map);
-  } else if (model_name == "bi-lstm") {
+  } else if (model_name == "char-lstm") {
     model_type = kCharacterLSTMPostagModel;
     engine = new CharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
-                                          char_n_layers, embed_dim, word_dim, word_hidden_dim,
+                                          char_n_layers, embed_dim, word_hidden_dim,
                                           word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_name == "char-gru-crf") {
+    model_type = kCharacterGRUPostagCRFModel;
+    engine = new CharacterGRUCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                            char_n_layers, embed_dim, word_hidden_dim,
+                                            word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_name == "char-lstm-crf") {
+    model_type = kCharacterLSTMPostagCRFModel;
+    engine = new CharacterLSTMCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                             char_n_layers, embed_dim, word_hidden_dim,
+                                             word_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_name == "char-gru-wcluster") {
+    model_type = kCharacterClusterGRUPostagModel;
+    engine = new CharacterGRUWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                                    char_n_layers, embed_dim, word_hidden_dim,
+                                                    word_n_layers, cluster_dim, cluster_hidden_dim,
+                                                    cluster_n_layers, pos_dim, char_map, pos_map);
+  } else if (model_name == "char-lstm-wcluster") {
+    model_type = kCharacterClusterLSTMPostagModel;
+    engine = new CharacterLSTMWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                                     char_n_layers, embed_dim, word_hidden_dim,
+                                                     word_n_layers, cluster_dim, cluster_hidden_dim,
+                                                     cluster_n_layers, pos_dim, char_map, pos_map);
   } else {
-    _ERROR << "[postag|model_builder] unknow tokenize model: " << model_name;
+    _ERROR << "[postag|model_builder] unknow postag model: " << model_name;
     exit(1);
   }
 

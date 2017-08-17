@@ -14,6 +14,8 @@
 #include "twpipe/optimizer_builder.h"
 #include "twpipe/trainer.h"
 #include "twpipe/model.h"
+#include "twpipe/embedding.h"
+#include "twpipe/cluster.h"
 
 namespace po = boost::program_options;
 
@@ -35,7 +37,8 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     ;
 
   po::options_description model_opts = twpipe::Model::get_options();
-  po::options_description embed_opts = twpipe::Corpus::get_options();
+  po::options_description embed_opts = twpipe::WordEmbedding::get_options();
+  po::options_description cluster_opts = twpipe::WordCluster::get_options();
   po::options_description training_opts = twpipe::Trainer::get_options();
   po::options_description tokenizer_opts = twpipe::TokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
@@ -50,6 +53,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     .add(running_opts)
     .add(model_opts)
     .add(embed_opts)
+    .add(cluster_opts)
     .add(training_opts)
     .add(tokenizer_opts)
     .add(postagger_opts)
@@ -78,13 +82,17 @@ int main(int argc, char* argv[]) {
   po::variables_map conf;
   init_command_line(argc, argv, conf);
 
-  twpipe::StrEmbeddingType embed;
   if (conf.count("embedding")) {
-    twpipe::load_word_embeddings(conf["embedding"].as<std::string>(),
-                                 conf["embedding-dim"].as<unsigned>(),
-                                 embed);
+    twpipe::WordEmbedding::get()->load(conf["embedding"].as<std::string>(),
+                                       conf["embedding-dim"].as<unsigned>());
   } else {
-    twpipe::load_empty_embeddings(conf["embedding-dim"].as<unsigned>(), embed);
+    twpipe::WordEmbedding::get()->empty(conf["embedding-dim"].as<unsigned>());
+  }
+
+  if (conf.count("cluster")) {
+    twpipe::WordCluster::get()->load(conf["cluster"].as<std::string>());
+  } else {
+    twpipe::WordCluster::get()->empty();
   }
 
   if (conf.count("train")) {
@@ -122,7 +130,7 @@ int main(int argc, char* argv[]) {
       builder.to_json();
 
       twpipe::PostagModel * engine = builder.build(model);
-      twpipe::PostaggerTrainer trainer(*engine, opt_builder, embed, conf);
+      twpipe::PostaggerTrainer trainer(*engine, opt_builder, conf);
       trainer.train(corpus);
     }
     if (conf["train-parser"].as<bool>() == true) {
@@ -187,9 +195,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (pos_engine) {
-          std::vector<std::vector<float>> values;
-          twpipe::get_embeddings(tokens, embed, conf["embedding-dim"].as<unsigned>(), values);
-          pos_engine->postag(tokens, values, postags);
+          pos_engine->postag(tokens, postags);
         }
 
         std::cout << "# text = " << buffer << "\n";
@@ -216,36 +222,44 @@ int main(int argc, char* argv[]) {
         twpipe::PostagModelBuilder pos_builder(conf, char_map, pos_map);
         pos_engine = pos_builder.from_json(pos_model);
       }
-   
+  
       std::vector<std::string> tokens;
+      std::vector<std::string> gold_postags;
       std::vector<std::string> postags;
+      std::string sentence;
       std::string buffer;
       std::ifstream ifs(conf["input-file"].as<std::string>());
+      float n_pos_corr = 0.;
+      float n_total = 0.;
       while (std::getline(ifs, buffer)) {
         boost::algorithm::trim(buffer);
         if (buffer.size() == 0) {
           if (pos_engine) {
-            std::vector<std::vector<float>> values;
-            twpipe::get_embeddings(tokens, embed, conf["embedding-dim"].as<unsigned>(), values);
-            pos_engine->postag(tokens, values, postags);
+            pos_engine->postag(tokens, postags);
           }
 
-          std::cout << "# text = " << buffer << "\n";
+          std::cout << "# text = " << sentence << "\n";
           for (unsigned i = 0; i < tokens.size(); ++i) {
             std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
-              << postags[i] << "\t_\t_\t_\t_\t_\n";
+              << postags[i] << "\t_\tGoldPOS=" << gold_postags[i] << "\t_\t_\t_\n";
+            if (postags[i] == gold_postags[i]) { n_pos_corr += 1.; }
+            n_total += 1.;
           }
           std::cout << "\n";
 
           tokens.clear();
           postags.clear();
+          gold_postags.clear();
+        } else if (buffer[0] == '#') {
+          if (boost::algorithm::starts_with(buffer, "# text = ")) { sentence = buffer.substr(9); }
         } else {
           std::vector<std::string> data;
           boost::algorithm::split(data, buffer, boost::is_any_of("\t "));
           tokens.push_back(data[1]);
-          postags.push_back(data[3]);
+          gold_postags.push_back(data[3]);
         }
       }
+      _INFO << "[evaluate] postag accuracy: " << n_pos_corr / n_total;
     }
   }
   return 0;

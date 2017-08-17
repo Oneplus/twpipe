@@ -1,18 +1,17 @@
 #include "postagger_trainer.h"
 #include "twpipe/model.h"
 #include "twpipe/logging.h"
+#include "twpipe/embedding.h"
 
 namespace twpipe {
 
 PostaggerTrainer::PostaggerTrainer(PostagModel & engine, 
                                    OptimizerBuilder & opt_builder,
-                                   const StrEmbeddingType & embeddings,
                                    po::variables_map & conf) :
   Trainer(conf),
   opt_builder(opt_builder),
-  engine(engine),
-  embeddings(embeddings) {
-  dim = embeddings.at(Corpus::BAD0).size();
+  engine(engine) {
+  dim = WordEmbedding::get()->dim();
 }
 
 void PostaggerTrainer::train(const Corpus & corpus) {
@@ -39,13 +38,8 @@ void PostaggerTrainer::train(const Corpus & corpus) {
 
       dynet::ComputationGraph cg;
       engine.new_graph(cg);
-      std::vector<std::string> words;
-      std::vector<std::vector<float>> values;
-      for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        words.push_back(inst.input_units[i].word);
-      }
-      get_embeddings(words, embeddings, dim, values);
-      dynet::Expression loss_expr = engine.objective(inst, values);
+
+      dynet::Expression loss_expr = engine.objective(inst);
       float l = dynet::as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
       loss += l;
@@ -68,8 +62,7 @@ void PostaggerTrainer::train(const Corpus & corpus) {
         words.push_back(inst.input_units[i].word);
         gold_postags.push_back(corpus.pos_map.get(inst.input_units[i].pid));
       }
-      get_embeddings(words, embeddings, dim, values);
-      engine.decode(words, values, pred_postags);
+      engine.decode(words, pred_postags);
       auto payload = engine.evaluate(gold_postags, pred_postags);
 
       n_recall += payload.first;

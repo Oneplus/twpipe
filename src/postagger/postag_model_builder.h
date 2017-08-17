@@ -3,6 +3,8 @@
 
 #include <boost/program_options.hpp>
 #include "char_rnn_postag_model.h"
+#include "char_rnn_crf_postag_model.h"
+#include "char_rnn_wcluster_postag_model.h"
 
 namespace po = boost::program_options;
 
@@ -11,7 +13,11 @@ namespace twpipe {
 struct PostagModelBuilder {
   enum ModelType {
     kCharacterGRUPostagModel,
-    kCharacterLSTMPostagModel
+    kCharacterLSTMPostagModel,
+    kCharacterGRUPostagCRFModel,
+    kCharacterLSTMPostagCRFModel,
+    kCharacterClusterGRUPostagModel,
+    kCharacterClusterLSTMPostagModel
   };
 
   ModelType model_type;
@@ -22,9 +28,11 @@ struct PostagModelBuilder {
   unsigned char_dim;
   unsigned char_hidden_dim;
   unsigned char_n_layers;
-  unsigned word_dim;
   unsigned word_hidden_dim;
   unsigned word_n_layers;
+  unsigned cluster_dim;
+  unsigned cluster_n_layers;
+  unsigned cluster_hidden_dim;
   unsigned pos_size;
   unsigned pos_dim;
   unsigned embed_dim;

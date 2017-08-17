@@ -73,7 +73,7 @@ struct RNNLayer : public LayerI {
   bool has_guard;
   bool reversed;
 
-  RNNLayer(dynet::ParameterCollection& ParameterCollection,
+  RNNLayer(dynet::ParameterCollection& model,
            unsigned n_layers,
            unsigned dim_input,
            unsigned dim_hidden,
@@ -82,8 +82,8 @@ struct RNNLayer : public LayerI {
            bool trainable = true) :
     LayerI(trainable),
     n_items(0),
-    rnn(n_layers, dim_input, dim_hidden, &ParameterCollection),
-    p_guard(ParameterCollection.add_parameters({ dim_input, 1 })),
+    rnn(n_layers, dim_input, dim_hidden, model),
+    p_guard(model.add_parameters({ dim_input, 1 })),
     has_guard(has_guard),
     reversed(rev) {
   }
@@ -146,6 +146,7 @@ struct BiRNNLayer : public LayerI {
              bool trainable = true) :
     LayerI(trainable),
     n_items(0),
+    has_guard(has_guard),
     fw_rnn(n_layers, dim_input, dim_hidden, model),
     bw_rnn(n_layers, dim_input, dim_hidden, model),
     p_fw_guard(model.add_parameters({ dim_input, 1 })),

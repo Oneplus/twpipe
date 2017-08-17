@@ -15,12 +15,10 @@ namespace twpipe {
 struct PostaggerTrainer : public Trainer {
   PostagModel & engine;
   OptimizerBuilder & opt_builder;
-  const StrEmbeddingType & embeddings;
   unsigned dim;
 
   PostaggerTrainer(PostagModel & engine,
                    OptimizerBuilder & opt_builder,
-                   const StrEmbeddingType & embeddings,
                    po::variables_map & conf);
 
   void train(const Corpus & corpus);

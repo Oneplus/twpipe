@@ -22,17 +22,13 @@ struct PostagModel {
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 
   virtual void decode(const std::vector<std::string> & words,
-                      const std::vector<std::vector<float>> & embeddings,
                       std::vector<std::string> & tags) = 0;
 
-  virtual dynet::Expression objective(const Instance & inst,
-                                      const std::vector<std::vector<float>> & embeddings) = 0;
+  virtual dynet::Expression objective(const Instance & inst) = 0;
+
+  void postag(const std::vector<std::string> & words);
 
   void postag(const std::vector<std::string> & words,
-              const std::vector<std::vector<float>> & embeddings);
-
-  void postag(const std::vector<std::string> & words,
-              const std::vector<std::vector<float>> & embeddings,
               std::vector<std::string> & tags);
 
   std::pair<float, float> evaluate(const std::vector<std::string> & gold,
