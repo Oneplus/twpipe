@@ -73,7 +73,7 @@ void SupervisedTrainer::train(Corpus& corpus) {
   
   dynet::Trainer* trainer = opt_builder.build(engine.model);
   float eta0 = trainer->learning_rate;
-  unsigned kUNK = AlphabetCollection::get()->word_map.get(Corpus::UNK);
+  // unsigned kUNK = AlphabetCollection::get()->word_map.get(Corpus::UNK);
 
   float llh = 0.f;
   float llh_in_batch = 0.f;
@@ -81,7 +81,6 @@ void SupervisedTrainer::train(Corpus& corpus) {
 
   std::vector<unsigned> order;
   get_orders(corpus, order, allow_nonprojective);
-  float n_train = order.size();
 
   unsigned logc = 0;
   bool use_beam_search = (beam_size > 1);

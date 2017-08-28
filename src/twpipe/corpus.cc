@@ -97,8 +97,6 @@ void Corpus::load_devel_data(const std::string& filename) {
   _INFO << "[corpus] reading development data from: " << filename;
 
   Alphabet & word_map = AlphabetCollection::get()->word_map;
-  Alphabet & char_map = AlphabetCollection::get()->char_map;
-  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
   BOOST_ASSERT_MSG(word_map.size() > 1,
                    "[corpus] BAD0 and UNK should be inserted before loading devel data.");

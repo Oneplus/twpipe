@@ -5,6 +5,7 @@
 #include "twpipe/layer.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
+#include "twpipe/embedding.h"
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
 
@@ -68,7 +69,7 @@ struct CharacterRNNPostagModel : public PostagModel {
     root_pos_id = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
   }
 
-  void new_graph(dynet::ComputationGraph & cg) {
+  void new_graph(dynet::ComputationGraph & cg) override {
     char_rnn.new_graph(cg);
     word_rnn.new_graph(cg);
     char_embed.new_graph(cg);
@@ -78,7 +79,7 @@ struct CharacterRNNPostagModel : public PostagModel {
     dense.new_graph(cg);
   }
 
-  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) {
+  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
     Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 

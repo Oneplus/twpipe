@@ -8,8 +8,8 @@ TokenizerTrainer::TokenizerTrainer(TokenizeModel & engine,
                                    OptimizerBuilder & opt_builder,
                                    po::variables_map & conf) :
   Trainer(conf),
-  opt_builder(opt_builder),
-  engine(engine) {
+  engine(engine),
+  opt_builder(opt_builder) {
 }
 
 void twpipe::TokenizerTrainer::train(const Corpus & corpus) {

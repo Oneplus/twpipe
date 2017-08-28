@@ -54,8 +54,8 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
                                      unsigned pos_dim) :
     PostagModel(model),
     char_rnn(model, char_n_layers, char_dim, char_hidden_dim, false),
-    cluster_rnn(model, cluster_n_layers, cluster_dim, cluster_hidden_dim, false),
     word_rnn(model, word_n_layers, char_hidden_dim + char_hidden_dim + cluster_hidden_dim + embed_dim, word_hidden_dim),
+    cluster_rnn(model, cluster_n_layers, cluster_dim, cluster_hidden_dim, false),
     char_embed(model, char_size, char_dim),
     pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
     cluster_embed(model, 2, cluster_dim),
@@ -89,7 +89,7 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
     root_pos_id = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
   }
 
-  void new_graph(dynet::ComputationGraph & cg) {
+  void new_graph(dynet::ComputationGraph & cg) override {
     char_rnn.new_graph(cg);
     cluster_rnn.new_graph(cg);
     word_rnn.new_graph(cg);
@@ -106,7 +106,6 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
   void build_input_layer(const std::vector<std::string> & words,
                          std::vector<dynet::Expression> & word_exprs) {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
-    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     std::vector<std::vector<float>> embeddings;
     WordEmbedding::get()->render(words, embeddings);
@@ -152,7 +151,7 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
     }
   }
 
-  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) {
+  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
     unsigned n_words = words.size();
     std::vector<dynet::Expression> word_exprs;
     build_input_layer(words, word_exprs);    

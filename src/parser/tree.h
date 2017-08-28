@@ -29,7 +29,7 @@ struct DependencyUtils {
       return false;
     }
     for (unsigned modifier = 0; modifier < heads.size(); ++modifier) {
-      unsigned head = heads[modifier];
+      // unsigned head = heads[modifier];
       if (!visited[modifier]) { return false; }
     }
     return true;

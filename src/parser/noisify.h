@@ -11,9 +11,9 @@ namespace twpipe {
 struct Noisifier {
   enum NOISIFY_METHOD { kNone, kSingletonDroput, kWordDropout };
   NOISIFY_METHOD noisify_method;
+  Corpus& corpus;
   float singleton_dropout_prob;
   unsigned unk;
-  Corpus& corpus;
 
   Noisifier(Corpus & corpus,
             const std::string & noisify_method_name,

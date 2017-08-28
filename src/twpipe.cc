@@ -159,13 +159,15 @@ int main(int argc, char* argv[]) {
     if (conf["format"].as<std::string>() == "plain") {
       twpipe::TokenizeModel * tok_engine = nullptr;
       twpipe::PostagModel * pos_engine = nullptr;
+      twpipe::ParseModel * par_engine = nullptr;
         
       dynet::ParameterCollection tok_model;
       dynet::ParameterCollection pos_model;
+      dynet::ParameterCollection par_model;
 
       bool load_tokenize_model = (conf.count("tokenize") || conf.count("postag") || conf.count("parse"));
       bool load_postag_model = (conf.count("postag") || conf.count("parse"));
-      bool load_parse_model = (conf.count("parse"));
+      bool load_parse_model = (conf.count("parse") > 0);
 
       if (load_tokenize_model) {
         if (!twpipe::Model::get()->has_tokenizer_model()) {
@@ -184,7 +186,12 @@ int main(int argc, char* argv[]) {
         pos_engine = pos_builder.from_json(pos_model);
       }
       if (load_parse_model) {
-        BOOST_ASSERT_MSG(false, "[twpipe] parser not implemented.");
+        if (!twpipe::Model::get()->has_parser_model()) {
+          _ERROR << "[twpipe] doesn't have parser model";
+          exit(1);
+        }
+        twpipe::ParseModelBuilder par_builder(conf);
+        par_engine = par_builder.from_json(par_model);
       }
 
       std::string buffer;
@@ -193,29 +200,39 @@ int main(int argc, char* argv[]) {
         boost::algorithm::trim(buffer);
         std::vector<std::string> tokens;
         std::vector<std::string> postags;
-        if (tok_engine) {
+        std::vector<unsigned> heads;
+        std::vector<std::string> deprels;
+        if (tok_engine != nullptr) {
           tok_engine->tokenize(buffer, tokens);
         }
 
-        if (pos_engine) {
+        if (pos_engine != nullptr) {
           pos_engine->postag(tokens, postags);
+        }
+
+        if (par_engine != nullptr) {
+          par_engine->predict(tokens, postags, heads, deprels);
         }
 
         std::cout << "# text = " << buffer << "\n";
         for (unsigned i = 0; i < tokens.size(); ++i) {
           std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
-            << (pos_engine ? postags[i] : "_") << "\t_\t_\t_\t_\t_\n";
+                    << (pos_engine != nullptr ? postags[i] : "_") << "\t_\t"
+                    << (par_engine != nullptr ? std::to_string(heads[i]) : "_") << "\t"
+                    << (par_engine != nullptr ? deprels[i] : "_") << "\t_\t_\n";
         }
         std::cout << "\n";
       }
     } else {
       // for conll format, tokenization is impossible.
       twpipe::PostagModel * pos_engine = nullptr;
+      twpipe::ParseModel * par_engine = nullptr;
 
       dynet::ParameterCollection pos_model;
+      dynet::ParameterCollection par_model;
 
       bool load_postag_model = (conf.count("postag") || conf.count("parse"));
-      bool load_parse_model = (conf.count("parse"));
+      bool load_parse_model = (conf.count("parse") > 0);
       
       if (load_postag_model) {
         if (!twpipe::Model::get()->has_postagger_model()) {
@@ -225,10 +242,20 @@ int main(int argc, char* argv[]) {
         twpipe::PostagModelBuilder pos_builder(conf);
         pos_engine = pos_builder.from_json(pos_model);
       }
+
+      if (load_parse_model) {
+        if (!twpipe::Model::get()->has_parser_model()) {
+          _ERROR << "[twpipe] doesn't have parser model!";
+          exit(1);
+        }
+        twpipe::ParseModelBuilder par_builder(conf);
+        par_engine = par_builder.from_json(par_model);
+      }
   
       std::vector<std::string> tokens;
-      std::vector<std::string> gold_postags;
-      std::vector<std::string> postags;
+      std::vector<std::string> postags, gold_postags;
+      std::vector<unsigned> heads, gold_heads;
+      std::vector<std::string> deprels, gold_deprels;
       std::string sentence;
       std::string buffer;
       std::ifstream ifs(conf["input-file"].as<std::string>());
@@ -236,9 +263,12 @@ int main(int argc, char* argv[]) {
       float n_total = 0.;
       while (std::getline(ifs, buffer)) {
         boost::algorithm::trim(buffer);
-        if (buffer.size() == 0) {
-          if (pos_engine) {
+        if (buffer.empty()) {
+          if (pos_engine != nullptr) {
             pos_engine->postag(tokens, postags);
+          }
+          if (par_engine != nullptr) {
+            par_engine->predict(tokens, postags, heads, deprels);
           }
 
           std::cout << "# text = " << sentence << "\n";

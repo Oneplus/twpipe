@@ -160,18 +160,18 @@ struct Ballesteros15Model : public ParseModel {
                       State& state,
                       StateCheckpoint * checkpoint) override;
 
-  StateCheckpoint * get_initial_checkpoint();
+  StateCheckpoint * get_initial_checkpoint() override;
 
-  StateCheckpoint * copy_checkpoint(StateCheckpoint * checkpoint);
+  StateCheckpoint * copy_checkpoint(StateCheckpoint * checkpoint) override;
 
-  void destropy_checkpoint(StateCheckpoint * checkpoint);
+  void destropy_checkpoint(StateCheckpoint * checkpoint) override;
 
   /// Get the un-softmaxed scores from the LSTM-parser.
   dynet::Expression get_scores(StateCheckpoint * checkpoint) override;
 
   void raw_to_input_units(const std::vector<std::string> & words,
                           const std::vector<std::string> & postags,
-                          InputUnits & units);
+                          InputUnits & units) override;
 };
 
 }
