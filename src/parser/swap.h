@@ -1,7 +1,9 @@
-#ifndef SWAP_H
-#define SWAP_H
+#ifndef __TWPIPE_PARSER_SWAP_H__
+#define __TWPIPE_PARSER_SWAP_H__
 
 #include "system.h"
+
+namespace twpipe {
 
 struct Swap : public TransitionSystem {
   typedef std::tuple<bool, unsigned, unsigned> mpc_result_t;
@@ -12,9 +14,9 @@ struct Swap : public TransitionSystem {
   Swap(const Alphabet& deprel_map);
 
   std::string name(unsigned id) const override;
-  
+
   bool allow_nonprojective() const override;
-  
+
   unsigned num_actions() const override;
 
   unsigned num_deprels() const override;
@@ -24,14 +26,14 @@ struct Swap : public TransitionSystem {
                             const std::vector<unsigned>& ref_heads,
                             const std::vector<unsigned>& ref_deprels,
                             std::vector<float>& rewards);
-  
+
   unsigned get_structure_action(const unsigned & action) override;
-  
+
   void perform_action(State& state, const unsigned& action) override;
 
   void get_valid_actions(const State& state,
                          std::vector<unsigned>& valid_actions) override;
-  
+
   void get_oracle_actions(const std::vector<unsigned>& heads,
                           const std::vector<unsigned>& deprels,
                           std::vector<unsigned>& actions) override;
@@ -83,5 +85,7 @@ struct Swap : public TransitionSystem {
 
   unsigned parse_label(const unsigned & action) const;
 };
+
+}
 
 #endif  //  end for SWAP_H

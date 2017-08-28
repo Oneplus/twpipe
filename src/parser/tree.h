@@ -1,8 +1,10 @@
-#ifndef TREE_H
-#define TREE_H
+#ifndef __TWPIPE_TREE_H__
+#define __TWPIPE_TREE_H__
 
 #include <vector>
-#include "corpus.h"
+#include "twpipe/corpus.h"
+
+namespace twpipe {
 
 struct DependencyUtils {
   typedef std::vector<unsigned> node_t;
@@ -12,12 +14,10 @@ struct DependencyUtils {
     tree_t tree(heads.size());
     unsigned root = Corpus::BAD_HED;
 
-    for (unsigned modifier = 0; modifier < heads.size(); ++ modifier) {
+    for (unsigned modifier = 0; modifier < heads.size(); ++modifier) {
       unsigned head = heads[modifier];
       if (head == Corpus::BAD_HED) {
         root = modifier;
-      } else if (head == Corpus::REMOVED_HED) {
-        continue;
       } else if (head >= heads.size()) {
         return false;
       } else {
@@ -30,7 +30,6 @@ struct DependencyUtils {
     }
     for (unsigned modifier = 0; modifier < heads.size(); ++modifier) {
       unsigned head = heads[modifier];
-      if (head == Corpus::REMOVED_HED) { continue; }
       if (!visited[modifier]) { return false; }
     }
     return true;
@@ -40,27 +39,23 @@ struct DependencyUtils {
     if (visited[now]) { return false; }
 
     visited[now] = true;
-    for (unsigned next: tree[now]) {
+    for (unsigned next : tree[now]) {
       if (!is_tree_travel(next, tree, visited)) { return false; }
     }
     return true;
   }
 
   static bool is_non_projective(const std::vector<unsigned>& heads) {
-    for (unsigned modifier = 0; modifier < heads.size(); ++ modifier) {
+    for (unsigned modifier = 0; modifier < heads.size(); ++modifier) {
       unsigned head = heads[modifier];
-      if (head == Corpus::REMOVED_HED) { continue; }
-
       if (head < modifier) {
-        for (unsigned from = head + 1; from < modifier; ++ from) {
+        for (unsigned from = head + 1; from < modifier; ++from) {
           unsigned to = heads[from];
-          if (to == Corpus::REMOVED_HED) { continue; }
           if (to < head || to > modifier) { return true; }
         }
       } else {
-        for (unsigned from = modifier + 1; from < head && from < heads.size(); ++ from) {
+        for (unsigned from = modifier + 1; from < head && from < heads.size(); ++from) {
           unsigned to = heads[from];
-          if (to == Corpus::REMOVED_HED) { continue; }
           if (to < modifier || to > head) { return true; }
         }
       }
@@ -100,5 +95,7 @@ struct DependencyUtils {
     return (is_tree(heads) && is_projective(heads));
   }
 };
+
+}
 
 #endif  //  end for TREE_H

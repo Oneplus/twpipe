@@ -22,8 +22,6 @@ struct PostagModelBuilder {
 
   ModelType model_type;
   std::string model_name;
-  const Alphabet & char_map;
-  const Alphabet & pos_map;
   unsigned char_size;
   unsigned char_dim;
   unsigned char_hidden_dim;
@@ -37,9 +35,7 @@ struct PostagModelBuilder {
   unsigned pos_dim;
   unsigned embed_dim;
 
-  PostagModelBuilder(po::variables_map & conf, 
-                     const Alphabet & char_map,
-                     const Alphabet & pos_map);
+  PostagModelBuilder(po::variables_map & conf);
 
   PostagModel * build(dynet::ParameterCollection & model);
 

@@ -3,6 +3,7 @@
 
 #include <regex>
 #include "tokenize_model.h"
+#include "twpipe/alphabet_collection.h"
 
 namespace twpipe {
 
@@ -33,9 +34,8 @@ struct SegmentalRNNTokenizeModel : public TokenizeModel {
                             unsigned hidden_dim,
                             unsigned n_layers,
                             unsigned seg_dim,
-                            unsigned dur_dim,
-                            const Alphabet & char_map) :
-    TokenizeModel(model, char_map),
+                            unsigned dur_dim) :
+    TokenizeModel(model),
     bi_rnn(model, n_layers, char_dim, hidden_dim),
     seg_rnn(model, n_layers, hidden_dim, seg_dim),
     dur_embed(model, dur_dim),
@@ -68,6 +68,7 @@ struct SegmentalRNNTokenizeModel : public TokenizeModel {
   }
 
   dynet::Expression objective(const Instance & inst) {
+    Alphabet & char_map = AlphabetCollection::get()->char_map;
     const InputUnits & input_units = inst.input_units;
     std::string clean_input = std::regex_replace(inst.raw_sentence, one_more_space_regex, " ");
      

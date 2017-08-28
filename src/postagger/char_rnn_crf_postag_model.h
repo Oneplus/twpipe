@@ -5,6 +5,8 @@
 #include "twpipe/layer.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
+#include "twpipe/alphabet_collection.h"
+#include "twpipe/corpus.h"
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
 
@@ -33,8 +35,6 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
   unsigned pos_dim;
   unsigned root_pos_id;
 
-  const Alphabet & char_map;
-
   CharacterRNNCRFPostagModel(dynet::ParameterCollection & model,
                              unsigned char_size,
                              unsigned char_dim,
@@ -43,15 +43,13 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
                              unsigned embed_dim,
                              unsigned word_hidden_dim,
                              unsigned word_n_layers,
-                             unsigned pos_dim,
-                             const Alphabet & char_map,
-                             const Alphabet & pos_map) :
-    PostagModel(model, pos_map),
+                             unsigned pos_dim) :
+    PostagModel(model),
     char_rnn(model, char_n_layers, char_dim, char_hidden_dim, false),
     word_rnn(model, word_n_layers, char_hidden_dim + char_hidden_dim + embed_dim, word_hidden_dim),
     char_embed(model, char_size, char_dim),
-    pos_embed(model, pos_map.size(), pos_dim),
-    tran_embed(model, pos_map.size() * pos_map.size(), 1),
+    pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
+    tran_embed(model, AlphabetCollection::get()->pos_map.size() * AlphabetCollection::get()->pos_map.size(), 1),
     embed_input(embed_dim),
     merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
     dense(model, word_hidden_dim, 1),
@@ -61,8 +59,7 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     char_n_layers(char_n_layers),
     word_hidden_dim(word_hidden_dim),
     word_n_layers(word_n_layers),
-    pos_dim(pos_dim),
-    char_map(char_map) {
+    pos_dim(pos_dim) {
     _INFO << "[postag|model] name = " << name;
     _INFO << "[postag|model] number of character types = " << char_size;
     _INFO << "[postag|model] character dimension = " << char_dim;
@@ -73,7 +70,7 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     _INFO << "[postag|model] word rnn number layers = " << word_n_layers;
     _INFO << "[postag|model] postag hidden dimension = " << pos_dim;
 
-    root_pos_id = pos_map.get(Corpus::ROOT);
+    root_pos_id = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
   }
 
   void new_graph(dynet::ComputationGraph & cg) {
@@ -88,6 +85,9 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
   }
 
   void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) {
+    Alphabet & char_map = AlphabetCollection::get()->char_map;
+    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+
     std::vector<std::vector<float>> embeddings;
     WordEmbedding::get()->render(words, embeddings);
 

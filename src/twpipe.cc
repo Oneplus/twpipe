@@ -8,8 +8,11 @@
 #include "postagger/postag_model.h"
 #include "postagger/postag_model_builder.h"
 #include "postagger/postagger_trainer.h"
+#include "parser/parse_model.h"
+#include "parser/parse_model_builder.h"
+#include "parser/parser_trainer.h"
 #include "twpipe/logging.h"
-#include "twpipe/alphabet.h"
+#include "twpipe/alphabet_collection.h"
 #include "twpipe/corpus.h"
 #include "twpipe/optimizer_builder.h"
 #include "twpipe/trainer.h"
@@ -42,6 +45,8 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
   po::options_description training_opts = twpipe::Trainer::get_options();
   po::options_description tokenizer_opts = twpipe::TokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
+  po::options_description parser_opts = twpipe::ParseModel::get_options();
+  po::options_description parser_train_opts = twpipe::SupervisedTrainer::get_options();
   po::options_description optimizer_opts = twpipe::OptimizerBuilder::get_options();
 
   po::positional_options_description input_opts;
@@ -57,6 +62,8 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     .add(training_opts)
     .add(tokenizer_opts)
     .add(postagger_opts)
+    .add(parser_opts)
+    .add(parser_train_opts)
     .add(optimizer_opts)
     ;
 
@@ -98,10 +105,7 @@ int main(int argc, char* argv[]) {
   if (conf.count("train")) {
     twpipe::Corpus corpus;
     corpus.load_training_data(conf["input-file"].as<std::string>());
-
-    twpipe::Model::get()->to_json("char-map", corpus.char_map);
-    twpipe::Model::get()->to_json("pos-map", corpus.pos_map);
-    twpipe::Model::get()->to_json("deprel-map", corpus.deprel_map);
+    twpipe::AlphabetCollection::get()->to_json();
 
     if (conf.count("heldout")) {
       corpus.load_devel_data(conf["heldout"].as<std::string>());
@@ -114,7 +118,7 @@ int main(int argc, char* argv[]) {
       
       dynet::ParameterCollection model;
 
-      twpipe::TokenizeModelBuilder builder(conf, corpus.char_map);
+      twpipe::TokenizeModelBuilder builder(conf);
       builder.to_json();
 
       twpipe::TokenizeModel * engine = builder.build(model);
@@ -126,7 +130,7 @@ int main(int argc, char* argv[]) {
 
       dynet::ParameterCollection model;
 
-      twpipe::PostagModelBuilder builder(conf, corpus.char_map, corpus.pos_map);
+      twpipe::PostagModelBuilder builder(conf);
       builder.to_json();
 
       twpipe::PostagModel * engine = builder.build(model);
@@ -137,6 +141,12 @@ int main(int argc, char* argv[]) {
       _INFO << "[twpipe] going to train parser.";
 
       dynet::ParameterCollection model;
+      twpipe::ParseModelBuilder builder(conf);
+      builder.to_json();
+
+      twpipe::ParseModel * engine = builder.build(model);
+      twpipe::SupervisedTrainer trainer((*engine), opt_builder, conf);
+      trainer.train(corpus);
     }
 
     std::string model_name = conf["model"].as<std::string>();
@@ -144,14 +154,7 @@ int main(int argc, char* argv[]) {
   } else {
     std::string model_name = conf["model"].as<std::string>();
     twpipe::Model::get()->load(model_name);
-
-    twpipe::Alphabet char_map;
-    twpipe::Alphabet pos_map;
-    twpipe::Alphabet deprel_map;
-
-    twpipe::Model::get()->from_json("char-map", char_map);
-    twpipe::Model::get()->from_json("pos-map", pos_map);
-    twpipe::Model::get()->from_json("deprel-map", deprel_map);
+    twpipe::AlphabetCollection::get()->from_json();
 
     if (conf["format"].as<std::string>() == "plain") {
       twpipe::TokenizeModel * tok_engine = nullptr;
@@ -169,7 +172,7 @@ int main(int argc, char* argv[]) {
           _ERROR << "[twpipe] doesn't have tokenizer model!";
           exit(1);
         }
-        twpipe::TokenizeModelBuilder tok_builder(conf, char_map);
+        twpipe::TokenizeModelBuilder tok_builder(conf);
         tok_engine = tok_builder.from_json(tok_model);
       } 
       if (load_postag_model) {
@@ -177,7 +180,7 @@ int main(int argc, char* argv[]) {
           _ERROR << "[twpipe] doesn't have postagger model!";
           exit(1);
         }
-        twpipe::PostagModelBuilder pos_builder(conf, char_map, pos_map);
+        twpipe::PostagModelBuilder pos_builder(conf);
         pos_engine = pos_builder.from_json(pos_model);
       }
       if (load_parse_model) {
@@ -219,7 +222,7 @@ int main(int argc, char* argv[]) {
           _ERROR << "[twpipe] doesn't have postagger model!";
           exit(1);
         }
-        twpipe::PostagModelBuilder pos_builder(conf, char_map, pos_map);
+        twpipe::PostagModelBuilder pos_builder(conf);
         pos_engine = pos_builder.from_json(pos_model);
       }
   

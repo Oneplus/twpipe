@@ -1,31 +1,27 @@
 #include "noisify.h"
-#include "logging.h"
+#include "twpipe/logging.h"
+#include "twpipe/alphabet_collection.h"
 #include "dynet/dynet.h"
 
-po::options_description Noisifier::get_options() {
-  po::options_description cmd("Noisify options");
-  cmd.add_options()
-    ("noisify_method", po::value<std::string>()->default_value("none"), "The type of noisifying method [none|singleton|word]")
-    ("noisify_singleton_dropout_prob", po::value<float>()->default_value(0.2f), "The probability of dropping singleton, used in singleton mode.")
-    ;
-  return cmd;
-}
+namespace twpipe {
 
-Noisifier::Noisifier(const po::variables_map & conf, Corpus & c) : corpus(c) {
-  std::string noisify_method_name = conf["noisify_method"].as<std::string>();
+Noisifier::Noisifier(Corpus & c,
+                     const std::string & noisify_method_name,
+                     float singleton_dropout_prob) :
+  corpus(c),
+  singleton_dropout_prob(singleton_dropout_prob) {
   if (noisify_method_name == "none") {
     noisify_method = kNone;
   } else if (noisify_method_name == "singleton") {
     noisify_method = kSingletonDroput;
   } else if (noisify_method_name == "word") {
     noisify_method = kWordDropout;
-    singleton_dropout_prob = conf["noisify_singleton_dropout_prob"].as<float>();
   } else {
-    _WARN << "Noisifier:: Unknown noisify method " << noisify_method_name << ", disable noisify.";
+    _WARN << "[twpipe|parser|noisifier] unknown noisify method " << noisify_method_name << ", disable noisify.";
     noisify_method = kNone;
   }
-  _INFO << "Noisifier:: method = " << noisify_method_name;
-  unk = corpus.get_or_add_word(Corpus::UNK);
+  _INFO << "[twpipe|parser|noisifier] method = " << noisify_method_name;
+  unk = AlphabetCollection::get()->word_map.get(Corpus::UNK);
 }
 
 void Noisifier::noisify(InputUnits & units) const {
@@ -53,4 +49,6 @@ void Noisifier::noisify(InputUnits & units) const {
 
 void Noisifier::denoisify(InputUnits & units) const {
   for (auto& u : units) { u.wid = u.aux_wid; }
+}
+
 }

@@ -13,11 +13,9 @@ struct PostagModel {
   static po::options_description get_options();
 
   dynet::ParameterCollection & model;
-  const Alphabet & pos_map;
   unsigned pos_size;
 
-  PostagModel(dynet::ParameterCollection & model,
-              const Alphabet & pos_map);
+  PostagModel(dynet::ParameterCollection & model);
 
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 

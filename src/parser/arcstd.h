@@ -1,7 +1,9 @@
-#ifndef ARCSTD_H
-#define ARCSTD_H
+#ifndef __TWPIPE_PARSER_ARCSTD_H__
+#define __TWPIPE_PRASER_ARCSTD_H__
 
 #include "system.h"
+
+namespace twpipe {
 
 struct ArcStandard : public TransitionSystem {
   unsigned n_actions;
@@ -35,7 +37,7 @@ struct ArcStandard : public TransitionSystem {
 
   void get_valid_actions(const State& state,
                          std::vector<unsigned>& valid_actions) override;
-  
+
   void get_oracle_actions(const std::vector<unsigned>& heads,
                           const std::vector<unsigned>& deprels,
                           std::vector<unsigned>& actions) override;
@@ -49,7 +51,7 @@ struct ArcStandard : public TransitionSystem {
   static bool is_drop(const unsigned& action);
   static bool is_left(const unsigned& action);
   static bool is_right(const unsigned& action);
-  
+
   unsigned get_shift_id() const;
   unsigned get_drop_id() const;
   unsigned get_left_id(const unsigned& deprel) const;
@@ -63,5 +65,7 @@ struct ArcStandard : public TransitionSystem {
                                   std::vector<unsigned>& output,
                                   std::vector<unsigned>& actions);
 };
+
+}
 
 #endif  //  end for ARCSTD_H

@@ -5,7 +5,6 @@
 #include <vector>
 #include <set>
 #include <boost/program_options.hpp>
-#include "alphabet.h"
 
 namespace po = boost::program_options;
 
@@ -18,6 +17,7 @@ struct InputUnit {
   unsigned aux_wid; // copy of form ID
   std::string word;
   std::string lemma;
+  std::string postag;
   std::string feature;
 };
 
@@ -56,11 +56,6 @@ struct Corpus {
   unsigned n_train;
   unsigned n_devel;
 
-  Alphabet word_map;  //  alphabet of word
-  Alphabet char_map;  //  alphabet of characters
-  Alphabet pos_map;   //  alphabet of postag
-  Alphabet deprel_map;
-
   std::unordered_map<unsigned, Instance> training_data;
   std::unordered_map<unsigned, Instance> devel_data;
 
@@ -78,10 +73,6 @@ struct Corpus {
                   bool train);
 
   void get_vocabulary_and_word_count();
-
-  unsigned get_or_add_word(const std::string& word);
-
-  void stat();
 };
 
 }

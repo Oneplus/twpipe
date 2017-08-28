@@ -6,6 +6,7 @@
 #include "dynet/lstm.h"
 #include "twpipe/layer.h"
 #include "twpipe/logging.h"
+#include "twpipe/alphabet_collection.h"
 #include "tokenize_model.h"
 
 namespace twpipe {
@@ -33,9 +34,8 @@ struct LinearRNNTokenizeModel : public TokenizeModel {
                          unsigned char_size,
                          unsigned char_dim,
                          unsigned hidden_dim,
-                         unsigned n_layers,
-                         const Alphabet & char_map) :
-    TokenizeModel(model, char_map),
+                         unsigned n_layers) :
+    TokenizeModel(model),
     bi_rnn(model, n_layers, char_dim, hidden_dim),
     char_embed(model, char_size, char_dim),
     merge(model, hidden_dim, hidden_dim, hidden_dim),
@@ -63,6 +63,8 @@ struct LinearRNNTokenizeModel : public TokenizeModel {
 
   void decode(const std::string & input, std::vector<std::string> & output) {
     // First, replace multiple space with one space.
+    Alphabet & char_map = AlphabetCollection::get()->char_map;
+
     std::string clean_input = std::regex_replace(input, one_more_space_regex, " ");
     std::vector<unsigned> cids;
     std::vector<std::string> chars;
@@ -106,6 +108,7 @@ struct LinearRNNTokenizeModel : public TokenizeModel {
   }
 
   dynet::Expression objective(const Instance & inst) {
+    Alphabet & char_map = AlphabetCollection::get()->char_map;
     const InputUnits & input_units = inst.input_units;
     std::string clean_input = std::regex_replace(inst.raw_sentence, one_more_space_regex, " ");
     std::vector<unsigned> cids;

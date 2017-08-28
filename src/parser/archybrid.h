@@ -1,13 +1,17 @@
-#ifndef ARCHYBRID_H
-#define ARCHYBRID_H
+#ifndef __TWPIPE_PARSER_ARCHYBRID_H__
+#define __TWPIPE_PARSER_ARCHYBRID_H__
 
 #include "system.h"
+
+namespace twpipe {
 
 struct ArcHybrid : public TransitionSystem {
   unsigned n_actions;
   std::vector<std::string> action_names;
 
-  ArcHybrid(const Alphabet& deprel_map);
+  ArcHybrid();
+  
+  std::string name() const override;
 
   std::string name(unsigned id) const override;
 
@@ -25,29 +29,24 @@ struct ArcHybrid : public TransitionSystem {
 
   void perform_action(State & state, const unsigned& action) override;
 
-  bool is_valid_action(const State& state, const unsigned& act) const override; 
-  
+  bool is_valid_action(const State& state, const unsigned& act) const override;
+
   void get_valid_actions(const State& state,
                          std::vector<unsigned>& valid_actions) override;
 
   void get_oracle_actions(const std::vector<unsigned>& heads,
                           const std::vector<unsigned>& deprels,
                           std::vector<unsigned>& actions) override;
-  
+
   unsigned get_structure_action(const unsigned & action) override;
-  
+
   void shift_unsafe(State& state) const;
-  void drop_unsafe(State& state) const;
   void left_unsafe(State& state, const unsigned& deprel) const;
   void right_unsafe(State& state, const unsigned& deprel) const;
 
   float shift_dynamic_loss_unsafe(State& state,
                                   const std::vector<unsigned>& heads,
                                   const std::vector<unsigned>& deprels) const;
-
-  float drop_dynamic_loss_unsafe(State& state,
-                                 const std::vector<unsigned>& heads,
-                                 const std::vector<unsigned>& deprels) const;
 
   float left_dynamic_loss_unsafe(State& state,
                                  const unsigned& deprel,
@@ -60,12 +59,10 @@ struct ArcHybrid : public TransitionSystem {
                                   const std::vector<unsigned>& deprels) const;
 
   static bool is_shift(const unsigned& action);
-  static bool is_drop(const unsigned& action);
   static bool is_left(const unsigned& action);
   static bool is_right(const unsigned& action);
 
   static unsigned get_shift_id();
-  static unsigned get_drop_id();
   static unsigned get_left_id(const unsigned& deprel);
   static unsigned get_right_id(const unsigned& deprel);
   static unsigned parse_label(const unsigned& action);
@@ -78,4 +75,5 @@ struct ArcHybrid : public TransitionSystem {
                                   std::vector<unsigned>& actions);
 };
 
+}
 #endif  //  end for ARCHYBRID_H

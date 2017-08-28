@@ -1,4 +1,5 @@
 #include "postag_model.h"
+#include "twpipe/alphabet_collection.h"
 
 namespace twpipe {
 
@@ -19,11 +20,9 @@ po::options_description PostagModel::get_options() {
   return model_opts;
 }
 
-PostagModel::PostagModel(dynet::ParameterCollection & model, 
-                         const Alphabet & pos_map) :
-  model(model), 
-  pos_map(pos_map),
-  pos_size(pos_map.size()) {
+PostagModel::PostagModel(dynet::ParameterCollection & model) :
+  model(model),
+  pos_size(AlphabetCollection::get()->pos_map.size()) {
 }
 
 void PostagModel::postag(const std::vector<std::string>& words) {

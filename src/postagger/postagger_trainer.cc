@@ -1,6 +1,7 @@
 #include "postagger_trainer.h"
 #include "twpipe/model.h"
 #include "twpipe/logging.h"
+#include "twpipe/alphabet_collection.h"
 #include "twpipe/embedding.h"
 
 namespace twpipe {
@@ -54,13 +55,14 @@ void PostaggerTrainer::train(const Corpus & corpus) {
 
       dynet::ComputationGraph cg;
       engine.new_graph(cg);
-      std::vector<std::string> words;
-      std::vector<std::string> gold_postags;
-      std::vector<std::string> pred_postags;
+
+      unsigned len = inst.input_units.size();
+      std::vector<std::string> words(len - 1);
+      std::vector<std::string> gold_postags(len - 1), pred_postags;
       std::vector<std::vector<float>> values;
       for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        words.push_back(inst.input_units[i].word);
-        gold_postags.push_back(corpus.pos_map.get(inst.input_units[i].pid));
+        words[i - 1] = inst.input_units[i].word;
+        gold_postags[i - 1] = inst.input_units[i].postag;
       }
       engine.decode(words, pred_postags);
       auto payload = engine.evaluate(gold_postags, pred_postags);

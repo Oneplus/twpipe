@@ -1,12 +1,15 @@
-#include "parser.h"
+#include "parse_model.h"
+#include "noisify.h"
 #include "dynet/expr.h"
-#include "corpus.h"
-#include "logging.h"
+#include "twpipe/logging.h"
+#include "twpipe/alphabet_collection.h"
 #include <vector>
 #include <random>
 
-std::pair<unsigned, float> Parser::get_best_action(const std::vector<float>& scores,
-                                                   const std::vector<unsigned>& valid_actions) {
+namespace twpipe {
+
+std::pair<unsigned, float> ParseModel::get_best_action(const std::vector<float>& scores,
+                                                       const std::vector<unsigned>& valid_actions) {
   unsigned best_a = valid_actions[0];
   float best_score = scores[best_a];
   //! should use next valid action.
@@ -20,15 +23,33 @@ std::pair<unsigned, float> Parser::get_best_action(const std::vector<float>& sco
   return std::make_pair(best_a, best_score);
 }
 
-void Parser::initialize(dynet::ComputationGraph & cg,
+po::options_description ParseModel::get_options() {
+  po::options_description cmd("Parser settings.");
+  cmd.add_options()
+    ("parse-arch", po::value<std::string>()->default_value("b15"), "The architecture [dyer15, ballesteros15, kiperwasser16].")
+    ("parse-system", po::value<std::string>()->default_value("archybrid"), "")
+    ("parse-n-layer", po::value<unsigned>()->default_value(2), "The number of layers in LSTM.")
+    ("parse-char-dim", po::value<unsigned>()->default_value(16), "The dimension of char.")
+    ("parse-word-dim", po::value<unsigned>()->default_value(32), "number of LSTM layers.")
+    ("parse-pos-dim", po::value<unsigned>()->default_value(12), "POS dim, set it as 0 to disable POS.")
+    ("parse-pretrained-dim", po::value<unsigned>()->default_value(100), "Pretrained input dimension.")
+    ("parse-action-dim", po::value<unsigned>()->default_value(20), "The dimension for action.")
+    ("parse-label-dim", po::value<unsigned>()->default_value(20), "The dimension for label.")
+    ("parse-lstm-input-dim", po::value<unsigned>()->default_value(100), "The dimension for lstm input.")
+    ("parse-hidden-dim", po::value<unsigned>()->default_value(100), "The dimension for hidden unit.")
+    ;
+  return cmd;
+}
+
+void ParseModel::initialize(dynet::ComputationGraph & cg,
                         const InputUnits & input,
                         State & state,
-                        Parser::StateCheckpoint * checkpoint) {
+                        ParseModel::StateCheckpoint * checkpoint) {
   initialize_state(input, state);
   initialize_parser(cg, input, checkpoint);
 }
 
-void Parser::initialize_state(const InputUnits & input, State & state) {
+void ParseModel::initialize_state(const InputUnits & input, State & state) {
   unsigned len = input.size();
   state.buffer.resize(len + 1);
   for (unsigned i = 0; i < len; ++i) { state.buffer[len - i] = i; }
@@ -36,9 +57,52 @@ void Parser::initialize_state(const InputUnits & input, State & state) {
   state.stack.push_back(Corpus::BAD_HED);
 }
 
-void Parser::predict(dynet::ComputationGraph& cg,
-                     const InputUnits& input,
-                     ParseUnits& parse) {
+ParseModel::ParseModel(dynet::ParameterCollection & m,
+                       TransitionSystem & s) : model(m), sys(s) {
+}
+
+void ParseModel::predict(const std::vector<std::string>& words,
+                         const std::vector<std::string>& postags,
+                         std::vector<unsigned>& heads,
+                         std::vector<std::string>& deprels) {
+  InputUnits input;
+  raw_to_input_units(words, postags, input);
+
+  ParseUnits result;
+  dynet::ComputationGraph cg;
+  predict(cg, input, result);
+
+  parse_units_to_raw(result, heads, deprels);
+}
+
+void ParseModel::label(const std::vector<std::string> & words,
+                       const std::vector<std::string> & postags,
+                       const std::vector<unsigned> & heads,
+                       std::vector<std::string> & deprels) {
+  BOOST_ASSERT_MSG(false, "not implemented.");
+}
+
+void ParseModel::parse_units_to_raw(const ParseUnits & units,
+                                    std::vector<unsigned>& heads,
+                                    std::vector<std::string>& deprels,
+                                    bool add_pseudo_root) {
+  heads.clear();
+  deprels.clear();
+
+  if (add_pseudo_root) {
+    heads.push_back(Corpus::BAD_HED);
+    deprels.push_back(Corpus::ROOT);
+  }
+  // The first element in units is pseduo root.
+  for (unsigned i = 1; i < units.size(); ++i) {
+    heads.push_back(units[i].head);
+    deprels.push_back(AlphabetCollection::get()->deprel_map.get(units[i].deprel));
+  }
+}
+
+void ParseModel::predict(dynet::ComputationGraph& cg,
+                         const InputUnits& input,
+                         ParseUnits& parse) {
   new_graph(cg);
 
   unsigned len = input.size();
@@ -52,7 +116,7 @@ void Parser::predict(dynet::ComputationGraph& cg,
     std::vector<unsigned> valid_actions;
     sys.get_valid_actions(state, valid_actions);
 
-    dynet::expr::Expression score_exprs = get_scores(checkpoint);
+    dynet::Expression score_exprs = get_scores(checkpoint);
     std::vector<float> scores = dynet::as_vector(cg.get_value(score_exprs));
 
     auto payload = get_best_action(scores, valid_actions);
@@ -64,7 +128,7 @@ void Parser::predict(dynet::ComputationGraph& cg,
   vector_to_parse(state.heads, state.deprels, parse);
 }
 
-void Parser::label(dynet::ComputationGraph & cg,
+void ParseModel::label(dynet::ComputationGraph & cg,
                    const InputUnits & input,
                    const ParseUnits & parse,
                    ParseUnits & output) {
@@ -85,7 +149,7 @@ void Parser::label(dynet::ComputationGraph & cg,
     std::vector<unsigned> valid_actions;
     sys.get_valid_actions(state, valid_actions);
 
-    dynet::expr::Expression score_exprs = get_scores(checkpoint);
+    dynet::Expression score_exprs = get_scores(checkpoint);
     std::vector<float> scores = dynet::as_vector(cg.get_value(score_exprs));
 
     unsigned best_a = UINT_MAX, ref_structure_action = sys.get_structure_action(ref_actions[step]);
@@ -101,11 +165,11 @@ void Parser::label(dynet::ComputationGraph & cg,
   vector_to_parse(state.heads, state.deprels, output);
 }
 
-void Parser::beam_search(dynet::ComputationGraph & cg,
-                         const InputUnits & input,
-                         const unsigned& beam_size,
-                         bool structure_score,
-                         std::vector<ParseUnits>& parses) {
+void ParseModel::beam_search(dynet::ComputationGraph & cg,
+                             const InputUnits & input,
+                             const unsigned& beam_size,
+                             bool structure_score,
+                             std::vector<ParseUnits>& parses) {
   typedef std::tuple<unsigned, unsigned, float> Transition;
 
   new_graph(cg);
@@ -131,8 +195,8 @@ void Parser::beam_search(dynet::ComputationGraph & cg,
       std::vector<unsigned> valid_actions;
       sys.get_valid_actions(state, valid_actions);
 
-      dynet::expr::Expression score_exprs = get_scores(checkpoint);
-      if (!structure_score) { score_exprs = dynet::expr::log_softmax(score_exprs); }
+      dynet::Expression score_exprs = get_scores(checkpoint);
+      if (!structure_score) { score_exprs = dynet::log_softmax(score_exprs); }
       std::vector<float> s = dynet::as_vector(cg.get_value(score_exprs));
       for (unsigned a : valid_actions) {
         transitions.push_back(std::make_tuple(i, a, score + s[a]));
@@ -168,4 +232,6 @@ void Parser::beam_search(dynet::ComputationGraph & cg,
   for (unsigned i = curr; i < next; ++i) {
     vector_to_parse(states[i].heads, states[i].deprels, parses[i - curr]);
   }
+}
+
 }

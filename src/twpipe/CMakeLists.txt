@@ -3,6 +3,8 @@ add_library (twpipe_utils
     logging.cc
     alphabet.h
     alphabet.cc
+    alphabet_collection.h
+    alphabet_collection.cc
     corpus.h
     corpus.cc
     layer.h

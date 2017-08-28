@@ -1,4 +1,5 @@
 #include "tokenize_model.h"
+#include "twpipe/alphabet_collection.h"
 #include <set>
 
 po::options_description twpipe::TokenizeModel::get_options() {
@@ -13,11 +14,9 @@ po::options_description twpipe::TokenizeModel::get_options() {
   return model_opts;
 }
 
-twpipe::TokenizeModel::TokenizeModel(dynet::ParameterCollection & model,
-                                     const Alphabet & char_map) : 
+twpipe::TokenizeModel::TokenizeModel(dynet::ParameterCollection & model) : 
   model(model),
-  char_map(char_map),
-  space_cid(char_map.get(Corpus::SPACE)) {
+  space_cid(AlphabetCollection::get()->char_map.get(Corpus::SPACE)) {
 }
 
 void twpipe::TokenizeModel::tokenize(const std::string & input) {

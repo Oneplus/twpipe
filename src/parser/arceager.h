@@ -1,7 +1,9 @@
-#ifndef ARCEAGER_H
-#define ARCEAGER_H
+#ifndef __TWPIPE_PARSER_ARCEAGER_H__
+#define __TWPIPE_PARSER_ARCEAGER_H__
 
 #include "system.h"
+
+namespace twpipe {
 
 struct ArcEager : public TransitionSystem {
   unsigned n_actions;
@@ -14,7 +16,7 @@ struct ArcEager : public TransitionSystem {
   bool allow_nonprojective() const override;
 
   unsigned num_actions() const override;
-  
+
   unsigned num_deprels() const override;
 
   void get_transition_costs(const State& state,
@@ -24,7 +26,7 @@ struct ArcEager : public TransitionSystem {
                             std::vector<float>& rewards) override;
 
   void perform_action(State & state, const unsigned& action) override;
- 
+
   bool is_valid_action(const State& state, const unsigned& act) const override;
 
   void get_valid_actions(const State& state,
@@ -86,4 +88,5 @@ struct ArcEager : public TransitionSystem {
                                   std::vector<unsigned>& actions);
 };
 
+}
 #endif  //  end for ARCEAGER_H

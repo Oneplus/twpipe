@@ -2,6 +2,7 @@
 #include "lin_rnn_tokenize_model.h"
 #include "seg_rnn_tokenize_model.h"
 #include "twpipe/logging.h"
+#include "twpipe/alphabet_collection.h"
 
 namespace twpipe {
 
@@ -14,8 +15,7 @@ template<> const char* LinearLSTMTokenizeModel::name = "LinearLSTMTokenizeModel"
 template<> const char* SegmentalGRUTokenizeModel::name = "SegmentalGRUTokenizeModel";
 template<> const char* SegmentalLSTMTokenizeModel::name = "SegmentalLSTMTokenizeModel";
 
-TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
-                                           const Alphabet & char_map) : char_map(char_map) {
+TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf) {
   model_name = conf["tok-model-name"].as<std::string>();
 
   if (model_name == "bi-gru") {
@@ -30,7 +30,7 @@ TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
     _ERROR << "[tokenize|model_builder] unknow tokenize model: " << model_name;
   }
 
-  char_size = char_map.size();
+  char_size = AlphabetCollection::get()->char_map.size();
   char_dim = (conf.count("tok-char-dim") ? conf["tok-char-dim"].as<unsigned>() : 0);
   hidden_dim = (conf.count("tok-hidden-dim") ? conf["tok-hidden-dim"].as<unsigned>() : 0);
   n_layers = (conf.count("tok-n-layer") ? conf["tok-n-layer"].as<unsigned>() : 0);
@@ -41,17 +41,15 @@ TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf,
 TokenizeModel * TokenizeModelBuilder::build(dynet::ParameterCollection & model) {
   TokenizeModel * engine = nullptr;
   if (model_type == kLinearGRUTokenizeModel) {
-    engine = new LinearGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                        char_map);
+    engine = new LinearGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers);
   } else if (model_type == kLinearLSTMTokenizeModel) {
-    engine = new LinearLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                         char_map);
+    engine = new LinearLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers);
   } else if (model_type == kSegmentalGRUTokenizeModel) {
     engine = new SegmentalGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                           seg_dim, dur_dim, char_map);
+                                           seg_dim, dur_dim);
   } else if (model_type == kSegmentalLSTMTokenizeModel) {
     engine = new SegmentalLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                            seg_dim, dur_dim, char_map);
+                                            seg_dim, dur_dim);
   } else {
     _ERROR << "[tokenize|model_builder] Unknown tokenize model: " << model_name;
     exit(1);
@@ -93,12 +91,10 @@ TokenizeModel * TokenizeModelBuilder::from_json(dynet::ParameterCollection & mod
 
   if (model_name == "bi-gru") {
     model_type = kLinearGRUTokenizeModel;
-    engine = new LinearGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                        char_map);
+    engine = new LinearGRUTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers);
   } else if (model_name == "bi-lstm") {
     model_type = kLinearLSTMTokenizeModel;
-    engine = new LinearLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers,
-                                         char_map);
+    engine = new LinearLSTMTokenizeModel(model, char_size, char_dim, hidden_dim, n_layers);
   } else if (model_name == "seg-gru") {
     model_type = kSegmentalGRUTokenizeModel;
     BOOST_ASSERT_MSG(false, "SegmentalRNN not implemented.");

@@ -1,51 +1,41 @@
-add_executable(tweetparser_kai
-    alphabet.cc
-    alphabet.h
-    corpus.cc
-    corpus.h
+include_directories (${PROJECT_SOURCE_DIR}/src)
+
+add_library(twpipe_parser
     tree.h
-    logging.cc
-    logging.h
-    sys_utils.cc
-    sys_utils.h
-    trainer_utils.cc
-    trainer_utils.h
-	noisify.cc
-	noisify.h
-    layer.cc
-    layer.h
-    main.cc
-    train_supervised.cc
-    train_supervised.h
-    evaluate.cc
-    evaluate.h
+    noisify.cc
+    noisify.h
+    #evaluate.cc
+    #evaluate.h
     state.h
     state.cc
-    arcstd.cc
-    arcstd.h
-    arceager.cc
-    arceager.h
+    #arcstd.cc
+    #arcstd.h
+    #arceager.cc
+    #arceager.h
     archybrid.cc
     archybrid.h
-    swap.cc
-    swap.h
+    #swap.cc
+    #swap.h
     system.h
-	system_builder.cc
-	system_builder.h
-    parser.cc
-    parser.h
-    parser_dyer15.cc
-    parser_dyer15.h
-    parser_ballesteros15.cc
-    parser_ballesteros15.h
-	parser_kiperwasser16.cc
-	parser_kiperwasser16.h
-	parser_builder.cc
-	parser_builder.h
-	)
+    #system_builder.cc
+    #system_builder.h
+    parse_model.cc
+    parse_model.h
+    parse_model_ballesteros15.cc
+    parse_model_ballesteros15.h
+    #parser_dyer15.cc
+    #parser_dyer15.h
+    #parser_kiperwasser16.cc
+    #parser_kiperwasser16.h
+    parse_model_builder.cc
+    parse_model_builder.h
+    parser_trainer.cc
+    parser_trainer.h
+    #parser_trainer.h
+    #parser_trainer.cc
+    )
 
-if (MSVC)
-	target_link_libraries(tweetparser_kai dynet ${LIBS})
-else()
-	target_link_libraries(tweetparser_kai dynet ${LIBS} z)
-endif()
+target_link_libraries (twpipe_parser
+    ${LIBS}
+    dynet
+    twpipe_utils)

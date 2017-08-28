@@ -15,11 +15,9 @@ struct TokenizeModel {
   static po::options_description get_options();
 
   dynet::ParameterCollection & model;
-  const Alphabet & char_map;
   unsigned space_cid;
 
-  TokenizeModel(dynet::ParameterCollection & model,
-                const Alphabet & char_map);
+  TokenizeModel(dynet::ParameterCollection & model);
 
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 

@@ -18,7 +18,6 @@ struct TokenizeModelBuilder {
 
   ModelType model_type;
   std::string model_name;
-  const Alphabet & char_map;
   unsigned char_size;
   unsigned char_dim;
   unsigned hidden_dim;
@@ -26,7 +25,7 @@ struct TokenizeModelBuilder {
   unsigned seg_dim;
   unsigned dur_dim;
 
-  TokenizeModelBuilder(po::variables_map & conf, const Alphabet & char_map);
+  TokenizeModelBuilder(po::variables_map & conf);
 
   TokenizeModel * build(dynet::ParameterCollection & model);
 

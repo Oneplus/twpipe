@@ -1,22 +1,28 @@
 #include "archybrid.h"
-#include "logging.h"
-#include "corpus.h"
+#include "twpipe/logging.h"
+#include "twpipe/corpus.h"
+#include "twpipe/alphabet_collection.h"
 #include <bitset>
 #include <boost/assert.hpp>
 
-ArcHybrid::ArcHybrid(const Alphabet& map) : TransitionSystem(map) {
+namespace twpipe {
 
-  n_actions = 2 + 2 * map.size();
+ArcHybrid::ArcHybrid() {
+  Alphabet & map = AlphabetCollection::get()->deprel_map;
+  n_actions = 1 + 2 * map.size();
   action_names.push_back("SHIFT");
-  action_names.push_back("DROP");
   for (unsigned i = 0; i < map.size(); ++i) {
     action_names.push_back("LEFT-" + map.get(i));
     action_names.push_back("RIGHT-" + map.get(i));
   }
-  _INFO << "ArcHybrid:: show action names:";
+  _INFO << "[twpipe|parser|archybrid] show action names:";
   for (const auto& action_name : action_names) {
     _INFO << "- " << action_name;
   }
+}
+
+std::string ArcHybrid::name() const {
+  return "archybrid";
 }
 
 std::string ArcHybrid::name(unsigned id) const {
@@ -30,14 +36,7 @@ bool ArcHybrid::allow_nonprojective() const {
 
 unsigned ArcHybrid::num_actions() const { return n_actions; }
 
-unsigned ArcHybrid::num_deprels() const { return deprel_map.size(); }
-
-void ArcHybrid::drop_unsafe(State& state) const {
-  unsigned b = state.buffer.back();
-  state.heads[b] = Corpus::REMOVED_HED;
-  state.deprels[b] = Corpus::REMOVED_DEL;
-  state.buffer.pop_back();
-}
+unsigned ArcHybrid::num_deprels() const { return AlphabetCollection::get()->deprel_map.size(); }
 
 void ArcHybrid::shift_unsafe(State& state) const {
   state.stack.push_back(state.buffer.back());
@@ -83,41 +82,6 @@ float ArcHybrid::shift_dynamic_loss_unsafe(State& state,
     if (ref_heads[d] == b) { c += 1.; }
   }
   shift_unsafe(state);
-  return c;
-}
-
-float ArcHybrid::drop_dynamic_loss_unsafe(State& state,
-                                          const std::vector<unsigned>& ref_heads,
-                                          const std::vector<unsigned>& ref_deprels) const {
-  float c = 0.;
-  unsigned b = state.buffer.back();
-  // The H = {s_1} U \sigma part
-  // state.stack[0] = GUARD
-  unsigned i_end = ((state.stack.size() > 2) ? state.stack.size() - 2 : 0);
-  for (unsigned i = 1; i < i_end; ++i) {
-    unsigned h = state.stack[i];
-    if (ref_heads[b] == h) { c += 1.; }
-  }
-  if (i_end > 0) {
-    unsigned h = state.stack[i_end];
-    if (ref_heads[b] == h) { c += 1.; }
-  }
-  for (unsigned i = 1; i < state.buffer.size() - 1; ++i) {
-    unsigned h = state.buffer[i];
-    if (ref_heads[b] == h) { c += 1.; }
-  }
-
-  // The D = {s_1, s_0} U \sigma part
-  // state.stack[0] = GUARD
-  for (unsigned i = 1; i < state.stack.size(); ++i) {
-    unsigned d = state.stack[i];
-    if (ref_heads[d] == b) { c += 1.; }
-  }
-  for (unsigned i = 1; i < state.buffer.size() - 1; ++i) {
-    unsigned d = state.buffer[i];
-    if (ref_heads[d] == b) { c += 1.; }
-  }
-  drop_unsafe(state);
   return c;
 }
 
@@ -193,7 +157,7 @@ void ArcHybrid::get_transition_costs(const State & state,
       } else {
         costs.push_back(wrong_left);
       }
-    } else if (is_right(act)) {
+    } else {
       unsigned deprel = parse_label(act);
       unsigned mod = state.stack.back(), hed = state.stack[state.stack.size() - 2];
       if (ref_heads[mod] == hed && ref_deprels[mod] == deprel) {
@@ -204,16 +168,12 @@ void ArcHybrid::get_transition_costs(const State & state,
       } else {
         costs.push_back(wrong_right);
       }
-    } else {
-      costs.push_back(-drop_dynamic_loss_unsafe(next_state, ref_heads, ref_deprels));
     }
   }
 }
 
 void ArcHybrid::perform_action(State & state, const unsigned& action) {
-  if (is_drop(action)) {
-    drop_unsafe(state);
-  } else if (is_shift(action)) {
+  if (is_shift(action)) {
     shift_unsafe(state);
   } else if (is_left(action)) {
     left_unsafe(state, parse_label(action));
@@ -223,28 +183,24 @@ void ArcHybrid::perform_action(State & state, const unsigned& action) {
 }
 
 unsigned ArcHybrid::get_shift_id() { return 0; }
-unsigned ArcHybrid::get_drop_id() { return 1; }
-unsigned ArcHybrid::get_left_id(const unsigned& deprel)  { return deprel * 2 + 2; }
-unsigned ArcHybrid::get_right_id(const unsigned& deprel) { return deprel * 2 + 3; }
+unsigned ArcHybrid::get_left_id(const unsigned& deprel) { return deprel * 2 + 1; }
+unsigned ArcHybrid::get_right_id(const unsigned& deprel) { return deprel * 2 + 2; }
 
 bool ArcHybrid::is_shift(const unsigned & action) { return action == 0; }
-bool ArcHybrid::is_drop(const unsigned & action) { return action == 1; }
-bool ArcHybrid::is_left(const unsigned & action)  { return (action > 1 && action % 2 == 0); }
-bool ArcHybrid::is_right(const unsigned & action) { return (action > 1 && action % 2 == 1); }
+bool ArcHybrid::is_left(const unsigned & action) { return (action % 2 == 1); }
+bool ArcHybrid::is_right(const unsigned & action) { return (action > 0 && action % 2 == 0); }
 
 bool ArcHybrid::is_valid_action(const State& state, const unsigned& act) const {
   if (is_shift(act)) {
-    if (state.buffer.size() == 2 && state.stack.size() > 1) { return false; }
+    /// guard should not be shifted.
+    if (state.buffer.size() <= 1) { return false; }
   } else if (is_left(act)) {
-    if (state.stack.size() < 2) { return false; }
-  } else if (is_right(act)) {
+    /// guard not should not be head.
+    if (state.buffer.size() < 2) { return false; }
+    /// pseduo root should not be reduced.
     if (state.stack.size() < 3) { return false; }
-    if (state.buffer.size() == 1) { return false; }
   } else {
-    if (state.buffer.size() <= 2) {
-      // root and guard not droppable.
-      return false;
-    }
+    if (state.stack.size() < 3) { return false; }
   }
   return true;
 }
@@ -259,8 +215,8 @@ void ArcHybrid::get_valid_actions(const State& state, std::vector<unsigned>& val
 }
 
 unsigned ArcHybrid::parse_label(const unsigned& action) {
-  BOOST_ASSERT_MSG(action > 1, "SHITF/DROP do not have label.");
-  return (action - 2) / 2;
+  BOOST_ASSERT_MSG(action > 0, "SHITF do not have label.");
+  return (action - 1) / 2;
 }
 
 void ArcHybrid::get_oracle_actions(const std::vector<unsigned>& heads,
@@ -278,7 +234,7 @@ void ArcHybrid::get_oracle_actions(const std::vector<unsigned>& heads,
 }
 
 unsigned ArcHybrid::get_structure_action(const unsigned & action) {
-  return (action < 2 ? action : (action % 2 == 0 ? 2 : 3));
+  return (action == 0 ? action : (action % 2 == 1 ? 1 : 2));
 }
 
 void ArcHybrid::get_oracle_actions_onestep(const std::vector<unsigned>& heads,
@@ -308,14 +264,11 @@ void ArcHybrid::get_oracle_actions_onestep(const std::vector<unsigned>& heads,
     sigma.pop_back();
   } else {
     if (beta < heads.size()) {
-      if (heads[b] == Corpus::REMOVED_HED) {
-        actions.push_back(get_drop_id());
-        output[b] = Corpus::REMOVED_HED;
-      } else {
-        actions.push_back(get_shift_id());
-        sigma.push_back(beta);
-      }
+      actions.push_back(get_shift_id());
+      sigma.push_back(beta);
       ++beta;
     }
-  } 
+  }
+}
+
 }

@@ -1,26 +1,29 @@
-#ifndef NOISIFY_H
-#define NOISIFY_H
+#ifndef __TWPIPE_PARSER_NOISIFY_H__
+#define __TWPIPE_PARSER_NOISIFY_H__
 
-#include "corpus.h"
+#include "twpipe/corpus.h"
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
+namespace twpipe {
+
 struct Noisifier {
-  enum NOISIFY_METHOD { kNone, kSingletonDroput, kWordDropout};
+  enum NOISIFY_METHOD { kNone, kSingletonDroput, kWordDropout };
   NOISIFY_METHOD noisify_method;
   float singleton_dropout_prob;
   unsigned unk;
   Corpus& corpus;
 
-  static po::options_description get_options();
-
-  Noisifier(const po::variables_map& conf, Corpus& corpus);
+  Noisifier(Corpus & corpus,
+            const std::string & noisify_method_name,
+            float singleton_dropout_prob = 0.5);
 
   void noisify(InputUnits& units) const;
 
   void denoisify(InputUnits& units) const;
 };
 
+}
 
 #endif  //  end for NOISIFY_H

@@ -1,29 +1,39 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef __TWPIPE_PARSER_PARSE_MODEL_H__
+#define __TWPIPE_PARSER_PARSE_MODEL_H__
 
-#include "layer.h"
-#include "corpus.h"
 #include "state.h"
 #include "system.h"
+#include "twpipe/layer.h"
+#include "twpipe/corpus.h"
 #include <vector>
 #include <unordered_map>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
-struct Parser {
+namespace twpipe {
+
+struct ParseModel {
+  static po::options_description get_options();
+
   struct StateCheckpoint {
     virtual ~StateCheckpoint() {}
   };
 
-  dynet::Model& model;
-  TransitionSystem& sys;
-  std::string system_name;
+  dynet::ParameterCollection & model;
+  TransitionSystem & sys;
 
-  Parser(dynet::Model& m,
-         TransitionSystem& s,
-         const std::string& sys_name) : 
-    model(m), sys(s), system_name(sys_name) {}
+  ParseModel(dynet::ParameterCollection & m, TransitionSystem& s);
+
+  void predict(const std::vector<std::string> & words,
+               const std::vector<std::string> & postags,
+               std::vector<unsigned> & heads,
+               std::vector<std::string> & deprels);
+
+  void label(const std::vector<std::string> & words,
+             const std::vector<std::string> & postags,
+             const std::vector<unsigned> & heads,
+             std::vector<std::string> & deprels);
 
   virtual void new_graph(dynet::ComputationGraph& cg) = 0;
 
@@ -54,7 +64,16 @@ struct Parser {
   virtual void destropy_checkpoint(StateCheckpoint * checkpoint) = 0;
 
   /// Get the un-softmaxed scores from the LSTM-parser.
-  virtual dynet::expr::Expression get_scores(StateCheckpoint * checkpoint) = 0;
+  virtual dynet::Expression get_scores(StateCheckpoint * checkpoint) = 0;
+ 
+  virtual void raw_to_input_units(const std::vector<std::string> & words,
+                                  const std::vector<std::string> & postags,
+                                  InputUnits & units) = 0;
+
+  void parse_units_to_raw(const ParseUnits & units,
+                          std::vector<unsigned> & heads,
+                          std::vector<std::string> & deprels,
+                          bool add_pseduo_root=false);
 
   void predict(dynet::ComputationGraph& cg,
                const InputUnits& input,
@@ -72,5 +91,6 @@ struct Parser {
                    std::vector<ParseUnits>& parse);
 };
 
+}
 
-#endif  //  end for PARSER_H
+#endif  //  end for __TWPIPE_PARSER_PARSE_MODEL_H__

@@ -1,4 +1,5 @@
 #include "corpus.h"
+#include "alphabet_collection.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -22,12 +23,9 @@ void parse_to_vector(const ParseUnits& parse,
                      std::vector<unsigned>& deprels) {
   heads.clear();
   deprels.clear();
+  /// The first unit is the pseudo root.
   for (unsigned i = 0; i < parse.size(); ++i) {
-    if (parse[i].head < Corpus::BAD_HED) {
-      heads.push_back(parse[i].head - 1);
-    } else {
-      heads.push_back(parse[i].head);
-    }
+    heads.push_back(parse[i].head);
     deprels.push_back(parse[i].deprel);
   }
 }
@@ -41,7 +39,7 @@ void vector_to_parse(const std::vector<unsigned>& heads,
 
   for (unsigned i = 0; i < heads.size(); ++i) {
     ParseUnit parse_unit;
-    parse_unit.head = (heads[i] < Corpus::BAD_HED ? heads[i] + 1 : heads[i]);
+    parse_unit.head = heads[i];
     parse_unit.deprel = deprels[i];
     parse.push_back(parse_unit);
   }
@@ -54,6 +52,10 @@ Corpus::Corpus() :
 
 void Corpus::load_training_data(const std::string& filename) {
   _INFO << "[corpus] reading training data from: " << filename;
+
+  Alphabet & word_map = AlphabetCollection::get()->word_map;
+  Alphabet & char_map = AlphabetCollection::get()->char_map;
+  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
   word_map.insert(Corpus::BAD0);
   word_map.insert(Corpus::UNK);
@@ -93,6 +95,11 @@ void Corpus::load_training_data(const std::string& filename) {
 
 void Corpus::load_devel_data(const std::string& filename) {
   _INFO << "[corpus] reading development data from: " << filename;
+
+  Alphabet & word_map = AlphabetCollection::get()->word_map;
+  Alphabet & char_map = AlphabetCollection::get()->char_map;
+  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+
   BOOST_ASSERT_MSG(word_map.size() > 1,
                    "[corpus] BAD0 and UNK should be inserted before loading devel data.");
 
@@ -142,11 +149,17 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
   InputUnit input_unit;
   ParseUnit parse_unit;
 
+  Alphabet & word_map = AlphabetCollection::get()->word_map;
+  Alphabet & char_map = AlphabetCollection::get()->char_map;
+  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+  Alphabet & deprel_map = AlphabetCollection::get()->deprel_map;
+
   // dummy root at first.
   input_unit.wid = word_map.get(ROOT);
   input_unit.pid = pos_map.get(ROOT);
   input_unit.aux_wid = input_unit.wid;
   input_unit.word = ROOT;
+  input_unit.postag = ROOT;
   input_unit.lemma = ROOT;
   input_unit.feature = ROOT;
   inst.input_units.push_back(input_unit);
@@ -167,11 +180,12 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
       
       if (train) {
         const std::string & word = input_unit.word = tokens[1];
+        const std::string & postag = input_unit.postag = tokens[3];
         input_unit.lemma = tokens[2];
         input_unit.feature = tokens[5];
 
         input_unit.wid = word_map.insert(word);
-        input_unit.pid = pos_map.insert(tokens[3]);
+        input_unit.pid = pos_map.insert(postag);
         input_unit.aux_wid = input_unit.wid;
 
         unsigned cur = 0;
@@ -188,11 +202,12 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
         inst.parse_units.push_back(parse_unit);
       } else {
         const std::string & word = input_unit.word = tokens[1];
+        const std::string & postag = input_unit.postag = tokens[3];
         input_unit.lemma = tokens[2];
         input_unit.feature = tokens[5];
 
         input_unit.wid = (word_map.contains(word) ? word_map.get(word) : word_map.get(UNK));
-        input_unit.pid = pos_map.get(tokens[3]);
+        input_unit.pid = pos_map.get(postag);
         input_unit.aux_wid = input_unit.wid;
 
         unsigned cur = 0;
@@ -221,17 +236,6 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
   if (inst.raw_sentence == "") {
     inst.raw_sentence = guessed_raw_sentence;
   }
-}
-
-unsigned Corpus::get_or_add_word(const std::string& word) {
-  return word_map.insert(word);
-}
-
-void Corpus::stat() {
-  _INFO << "[corpus] # of words = " << word_map.size();
-  _INFO << "[corpus] # of char = " << char_map.size();
-  _INFO << "[corpus] # of pos = " << pos_map.size();
-  _INFO << "[corpus] # of deprel = " << deprel_map.size();
 }
 
 void Corpus::get_vocabulary_and_word_count() {

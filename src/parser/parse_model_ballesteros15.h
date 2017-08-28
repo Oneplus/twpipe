@@ -1,18 +1,22 @@
-#ifndef PARSER_BALLESTEROS15_H
-#define PARSER_BALLESTEROS15_H
+#ifndef __TWPIPE_PARSER_BALLESTEROS15_H__
+#define __TWPIPE_PARSER_BALLESTEROS15_H__
 
-#include "parser.h"
-#include "layer.h"
-#include "corpus.h"
+#include "parse_model.h"
 #include "state.h"
 #include "system.h"
+#include "twpipe/layer.h"
+#include "twpipe/corpus.h"
 #include <vector>
 #include <unordered_map>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
-struct ParserBallesteros15 : public Parser {
+namespace twpipe {
+
+struct Ballesteros15Model : public ParseModel {
+  typedef dynet::CoupledLSTMBuilder LSTMBuilderType;
+
   struct StateCheckpointImpl : public StateCheckpoint {
     /// state machine
     ~StateCheckpointImpl() {}
@@ -20,23 +24,23 @@ struct ParserBallesteros15 : public Parser {
     dynet::RNNPointer s_pointer;
     dynet::RNNPointer q_pointer;
     dynet::RNNPointer a_pointer;
-    std::vector<dynet::expr::Expression> stack;
-    std::vector<dynet::expr::Expression> buffer;
+    std::vector<dynet::Expression> stack;
+    std::vector<dynet::Expression> buffer;
   };
 
   struct TransitionSystemFunction {
     virtual void perform_action(const unsigned& action,
                                 dynet::ComputationGraph& cg,
-                                dynet::LSTMBuilder& a_lstm,
-                                dynet::LSTMBuilder& s_lstm,
-                                dynet::LSTMBuilder& q_lstm,
+                                LSTMBuilderType & a_lstm,
+                                LSTMBuilderType & s_lstm,
+                                LSTMBuilderType & q_lstm,
                                 Merge3Layer& composer,
                                 StateCheckpointImpl & checkpoint,
-                                dynet::expr::Expression& act_expr,
-                                dynet::expr::Expression& rel_expr) = 0;
+                                dynet::Expression& act_expr,
+                                dynet::Expression& rel_expr) = 0;
   };
 
-  struct ArcEagerFunction : public TransitionSystemFunction {
+  /*struct ArcEagerFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
                         dynet::LSTMBuilder& a_lstm,
@@ -44,12 +48,12 @@ struct ParserBallesteros15 : public Parser {
                         dynet::LSTMBuilder& q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
-                        dynet::expr::Expression& act_expr,
-                        dynet::expr::Expression& rel_expr) override;
+                        dynet::Expression& act_expr,
+                        dynet::Expression& rel_expr) override;
 
-  };
+  };*/
 
-  struct ArcStandardFunction : public TransitionSystemFunction {
+  /*struct ArcStandardFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
                         dynet::LSTMBuilder& a_lstm,
@@ -57,45 +61,46 @@ struct ParserBallesteros15 : public Parser {
                         dynet::LSTMBuilder& q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
-                        dynet::expr::Expression& act_expr,
-                        dynet::expr::Expression& rel_expr) override;
-  };
-  
+                        dynet::Expression& act_expr,
+                        dynet::Expression& rel_expr) override;
+  };*/
+
   struct ArcHybridFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
-                        dynet::LSTMBuilder& a_lstm, 
-                        dynet::LSTMBuilder& s_lstm,
-                        dynet::LSTMBuilder& q_lstm,
+                        LSTMBuilderType & a_lstm,
+                        LSTMBuilderType & s_lstm,
+                        LSTMBuilderType & q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
-                        dynet::expr::Expression& act_expr,
-                        dynet::expr::Expression& rel_expr) override;
+                        dynet::Expression& act_expr,
+                        dynet::Expression& rel_expr) override;
   };
 
-  struct SwapFunction : public TransitionSystemFunction {
+  /*struct SwapFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
-                        dynet::LSTMBuilder& a_lstm, 
+                        dynet::LSTMBuilder& a_lstm,
                         dynet::LSTMBuilder& s_lstm,
                         dynet::LSTMBuilder& q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
-                        dynet::expr::Expression& act_expr,
-                        dynet::expr::Expression& rel_expr) override;
-  };
+                        dynet::Expression& act_expr,
+                        dynet::Expression& rel_expr) override;
+  };*/
 
-  dynet::LSTMBuilder fwd_ch_lstm;
-  dynet::LSTMBuilder bwd_ch_lstm;
-  dynet::LSTMBuilder s_lstm;
-  dynet::LSTMBuilder q_lstm;
-  dynet::LSTMBuilder a_lstm;
+
+  LSTMBuilderType fwd_ch_lstm;
+  LSTMBuilderType bwd_ch_lstm;
+  LSTMBuilderType s_lstm;
+  LSTMBuilderType q_lstm;
+  LSTMBuilderType a_lstm;
 
   SymbolEmbedding char_emb;
   SymbolEmbedding pos_emb;
-  SymbolEmbedding preword_emb;
   SymbolEmbedding act_emb;
   SymbolEmbedding rel_emb;
+  InputLayer pretrain_emb;
 
   Merge3Layer merge_input;  // merge (2 * word, pos, preword)
   Merge3Layer merge;        // merge (s_lstm, q_lstm, a_lstm)
@@ -108,45 +113,41 @@ struct ParserBallesteros15 : public Parser {
   dynet::Parameter p_word_start_guard;
   dynet::Parameter p_word_end_guard;
   dynet::Parameter p_root_word;
-  dynet::expr::Expression action_start;
-  dynet::expr::Expression buffer_guard;
-  dynet::expr::Expression stack_guard;
-  dynet::expr::Expression word_start_guard;
-  dynet::expr::Expression word_end_guard;
-  dynet::expr::Expression root_word;
+  dynet::Expression action_start;
+  dynet::Expression buffer_guard;
+  dynet::Expression stack_guard;
+  dynet::Expression word_start_guard;
+  dynet::Expression word_end_guard;
+  dynet::Expression root_word;
 
   /// state machine
   dynet::RNNPointer s_pointer;
   dynet::RNNPointer q_pointer;
   dynet::RNNPointer a_pointer;
-  std::vector<dynet::expr::Expression> stack;
-  std::vector<dynet::expr::Expression> buffer;
+  std::vector<dynet::Expression> stack;
+  std::vector<dynet::Expression> buffer;
 
   /// The reference
   TransitionSystemFunction* sys_func;
-  const std::unordered_map<unsigned, std::vector<float>>& pretrained;
 
   /// The Configurations: useful for other models.
-  unsigned size_c, dim_c, dim_w, size_p, dim_p, size_t, dim_t, size_a, dim_a, dim_l;
+  unsigned size_c, dim_c, dim_w, size_p, dim_p, dim_t, size_a, dim_a, dim_l;
   unsigned n_layers, dim_lstm_in, dim_hidden;
 
-  explicit ParserBallesteros15(dynet::Model& m,
-                          unsigned size_c,
-                          unsigned dim_c,
-                          unsigned dim_w,   // word size, word dim
-                          unsigned size_p,  //
-                          unsigned dim_p,   // pos size, pos dim
-                          unsigned size_t,  //
-                          unsigned dim_t,   // pword size, pword dim
-                          unsigned size_a,  //
-                          unsigned dim_a,   // act size, act dim
-                          unsigned dim_l,
-                          unsigned n_layers,
-                          unsigned dim_lstm_in,
-                          unsigned dim_hidden,
-                          const std::string& system_name,
-                          TransitionSystem& system,
-                          const std::unordered_map<unsigned, std::vector<float>>& pretrained);
+  explicit Ballesteros15Model(dynet::ParameterCollection & m,
+                              unsigned size_c,
+                              unsigned dim_c,
+                              unsigned dim_w,   // word size, word dim
+                              unsigned size_p,
+                              unsigned dim_p,   // pos size, pos dim
+                              unsigned dim_t,   // pword size, pword dim
+                              unsigned size_a,  //
+                              unsigned dim_a,   // act size, act dim
+                              unsigned dim_l,
+                              unsigned n_layers,
+                              unsigned dim_lstm_in,
+                              unsigned dim_hidden,
+                              TransitionSystem& system);
 
   void new_graph(dynet::ComputationGraph& cg) override;
 
@@ -166,7 +167,13 @@ struct ParserBallesteros15 : public Parser {
   void destropy_checkpoint(StateCheckpoint * checkpoint);
 
   /// Get the un-softmaxed scores from the LSTM-parser.
-  dynet::expr::Expression get_scores(StateCheckpoint * checkpoint) override;
+  dynet::Expression get_scores(StateCheckpoint * checkpoint) override;
+
+  void raw_to_input_units(const std::vector<std::string> & words,
+                          const std::vector<std::string> & postags,
+                          InputUnits & units);
 };
+
+}
 
 #endif  //  end for PARSER_H
