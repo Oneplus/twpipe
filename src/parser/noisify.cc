@@ -17,10 +17,10 @@ Noisifier::Noisifier(Corpus & c,
   } else if (noisify_method_name == "word") {
     noisify_method = kWordDropout;
   } else {
-    _WARN << "[twpipe|parser|noisifier] unknown noisify method " << noisify_method_name << ", disable noisify.";
+    _WARN << "[parse|noisifier] unknown noisify method " << noisify_method_name << ", disable noisify.";
     noisify_method = kNone;
   }
-  _INFO << "[twpipe|parser|noisifier] method = " << noisify_method_name;
+  _INFO << "[parse|noisifier] method = " << noisify_method_name;
   unk = AlphabetCollection::get()->word_map.get(Corpus::UNK);
 }
 

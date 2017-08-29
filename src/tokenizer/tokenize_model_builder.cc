@@ -27,7 +27,7 @@ TokenizeModelBuilder::TokenizeModelBuilder(po::variables_map & conf) {
   } else if (model_name == "seg-lstm") {
     model_type = kSegmentalLSTMTokenizeModel;
   } else {
-    _ERROR << "[tokenize|model_builder] unknow tokenize model: " << model_name;
+    _ERROR << "[tokenize|model_builder] unknown tokenize model: " << model_name;
   }
 
   char_size = AlphabetCollection::get()->char_map.size();
@@ -109,6 +109,5 @@ TokenizeModel * TokenizeModelBuilder::from_json(dynet::ParameterCollection & mod
   globals->from_json(Model::kTokenizerName, model);
   return engine;
 }
- 
 
 }

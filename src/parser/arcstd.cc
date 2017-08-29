@@ -1,23 +1,30 @@
 #include "arcstd.h"
-#include "logging.h"
-#include "corpus.h"
+#include "twpipe/logging.h"
+#include "twpipe/corpus.h"
+#include "twpipe/alphabet_collection.h"
 #include <bitset>
 #include <boost/assert.hpp>
 #include <boost/multi_array.hpp>
 
-ArcStandard::ArcStandard(const Alphabet& map) : TransitionSystem(map) {
-  n_actions = 2 + 2 * map.size();
+namespace twpipe {
+
+ArcStandard::ArcStandard() {
+  Alphabet & map = AlphabetCollection::get()->deprel_map;
+  n_actions = 1 + 2 * map.size();
 
   action_names.push_back("SHIFT");
-  action_names.push_back("DROP");
   for (unsigned i = 0; i < map.size(); ++i) {
     action_names.push_back("LEFT-" + map.get(i));
     action_names.push_back("RIGHT-" + map.get(i));
   }
-  _INFO << "TransitionSystem:: show action names:";
+  _INFO << "[parse|arcstd] show action names:";
   for (const auto& action_name : action_names) {
     _INFO << "- " << action_name;
   }
+}
+
+std::string twpipe::ArcStandard::name() const {
+  return "arcstd";
 }
 
 std::string ArcStandard::name(unsigned id) const {
@@ -31,17 +38,10 @@ bool ArcStandard::allow_nonprojective() const {
 
 unsigned ArcStandard::num_actions() const { return n_actions; }
 
-unsigned ArcStandard::num_deprels() const { return deprel_map.size(); }
+unsigned ArcStandard::num_deprels() const { return AlphabetCollection::get()->deprel_map.size(); }
 
 void ArcStandard::shift_unsafe(State& state) const {
   state.stack.push_back(state.buffer.back());
-  state.buffer.pop_back();
-}
-
-void ArcStandard::drop_unsafe(State& state) const {
-  unsigned b = state.buffer.back();
-  state.heads[b] = Corpus::REMOVED_HED;
-  state.deprels[b] = Corpus::REMOVED_DEL;
   state.buffer.pop_back();
 }
 
@@ -56,7 +56,7 @@ void ArcStandard::left_unsafe(State& state,
 void ArcStandard::right_unsafe(State& state,
                                const unsigned& deprel) const {
   unsigned mod = state.stack.back(); state.stack.pop_back();
-  unsigned hed = state.stack.back(); 
+  unsigned hed = state.stack.back();
   state.heads[mod] = hed;
   state.deprels[mod] = deprel;
 }
@@ -77,7 +77,7 @@ unsigned ArcStandard::cost(const State& state,
   unsigned root = 0;
   for (unsigned i = 0; i < ref_heads.size(); ++i) {
     unsigned h = ref_heads[i];
-    if (h != Corpus::BAD_HED && h != Corpus::REMOVED_HED) {
+    if (h != Corpus::BAD_HED) {
       tree[h].push_back(i);
     } else {
       root = i;
@@ -177,12 +177,8 @@ void ArcStandard::get_transition_costs(const State & state,
       State next_state(state);
       perform_action(next_state, act);
       costs.push_back(c - cost(next_state, ref_heads, ref_deprels));
-    } else if (is_drop(act)) {
-      State next_state(state);
-      perform_action(next_state, act);
-      costs.push_back(c - cost(next_state, ref_heads, ref_deprels));
     } else if (is_left(act)) {
-      unsigned deprel = parse_label(act), hed = state.stack.back(), mod = state.stack[state.stack.size() - 2]; 
+      unsigned deprel = parse_label(act), hed = state.stack.back(), mod = state.stack[state.stack.size() - 2];
       if (ref_heads[mod] == hed && ref_deprels[mod] == deprel) {
         // assume that actions are unique and there is only one correct left action.
         State next_state(state); perform_action(next_state, act);
@@ -211,15 +207,13 @@ void ArcStandard::get_transition_costs(const State & state,
 }
 
 unsigned ArcStandard::get_structure_action(const unsigned & action) {
-  return (action < 2 ? action : (action % 2 == 0 ? 2 : 3));
+  return (action < 1 ? action : (action % 2 == 1 ? 1 : 2));
 }
 
 void ArcStandard::perform_action(State & state, const unsigned& action) {
   if (is_shift(action)) {
     // SHITF: counting for the last GUARD
     shift_unsafe(state);
-  } else if (is_drop(action)) {
-    drop_unsafe(state);
   } else {
     // LEFT or RIGHT: counting for the begining GUARD
     unsigned lid = parse_label(action);
@@ -232,23 +226,19 @@ void ArcStandard::perform_action(State & state, const unsigned& action) {
 }
 
 unsigned ArcStandard::get_shift_id() const { return 0; }
-unsigned ArcStandard::get_drop_id() const { return 1; }
-unsigned ArcStandard::get_left_id(const unsigned& deprel) const { return deprel * 2 + 2; }
-unsigned ArcStandard::get_right_id(const unsigned& deprel) const  { return deprel * 2 + 3; }
+unsigned ArcStandard::get_left_id(const unsigned& deprel) const { return deprel * 2 + 1; }
+unsigned ArcStandard::get_right_id(const unsigned& deprel) const { return deprel * 2 + 2; }
 
 bool ArcStandard::is_shift(const unsigned& action) { return action == 0; }
-bool ArcStandard::is_drop(const unsigned& action) { return action == 1; }
-bool ArcStandard::is_left(const unsigned& action) { return (action > 1 && action % 2 == 0); }
-bool ArcStandard::is_right(const unsigned& action) { return (action > 1 && action % 2 == 1); }
+bool ArcStandard::is_left(const unsigned& action) { return action % 2 == 1; }
+bool ArcStandard::is_right(const unsigned& action) { return (action > 1 && action % 2 == 0); }
 
 bool ArcStandard::is_valid_action(const State& state, const unsigned& act) const {
-  if (is_drop(act)) {
-    if (state.buffer.size() <= 2) { return false; }
-  } else if (is_shift(act)) {
+  if (is_shift(act)) {
     if (state.buffer.size() == 1) { return false; }
   } else {
     if (state.stack.size() < 3) { return false; }
-    if (state.buffer.size() == 1 && !is_left(act)) { return false; }
+    if (state.buffer.size() == 1 && !is_right(act)) { /*rule for pseudo root.*/ return false; }
   }
   return true;
 }
@@ -264,8 +254,8 @@ void ArcStandard::get_valid_actions(const State& state, std::vector<unsigned>& v
 }
 
 unsigned ArcStandard::parse_label(const unsigned& action) const {
-  BOOST_ASSERT_MSG(action > 1, "SHIFT/DROP do not have label.");
-  return (action - 2) / 2;
+  BOOST_ASSERT_MSG(action > 0, "SHIFT do not have label.");
+  return (action - 1) / 2;
 }
 
 void ArcStandard::get_oracle_actions(const std::vector<unsigned>& heads,
@@ -309,13 +299,10 @@ void ArcStandard::get_oracle_actions_onestep(const std::vector<unsigned>& heads,
     sigma.pop_back();
   } else {
     BOOST_ASSERT_MSG(beta < heads.size(), "should be more than one");
-    if (heads[beta] == Corpus::REMOVED_HED) {
-      actions.push_back(get_drop_id());
-      output[beta] = Corpus::REMOVED_HED;
-    } else {
-      actions.push_back(get_shift_id());
-      sigma.push_back(beta);
-    } 
+    actions.push_back(get_shift_id());
+    sigma.push_back(beta);
     ++beta;
   }
+}
+
 }

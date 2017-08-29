@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
         for (unsigned i = 0; i < tokens.size(); ++i) {
           std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
                     << (pos_engine != nullptr ? postags[i] : "_") << "\t_\t"
-                    << (par_engine != nullptr ? std::to_string(heads[i]) : "_") << "\t"
+                    << (par_engine != nullptr ? boost::lexical_cast<std::string>(heads[i]) : "_") << "\t"
                     << (par_engine != nullptr ? deprels[i] : "_") << "\t_\t_\n";
         }
         std::cout << "\n";

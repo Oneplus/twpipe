@@ -1,8 +1,8 @@
 #include "parse_model_ballesteros15.h"
 #include "dynet/expr.h"
+#include "arcstd.h"
 #include "archybrid.h"
 // #include "arceager.h"
-// #include "arcstd.h"
 // #include "swap.h"
 #include "twpipe/corpus.h"
 #include "twpipe/logging.h"
@@ -65,26 +65,23 @@ void ParserBallesteros15::ArcEagerFunction::perform_action(const unsigned& actio
   }
 }
 */
-/*
-void ParserBallesteros15::ArcStandardFunction::perform_action(const unsigned& action,
-                                                              dynet::ComputationGraph& cg,
-                                                              dynet::LSTMBuilder& a_lstm,
-                                                              dynet::LSTMBuilder& s_lstm,
-                                                              dynet::LSTMBuilder& q_lstm,
-                                                              Merge3Layer& composer,
-                                                              ParserBallesteros15::StateCheckpointImpl & cp,
-                                                              dynet::Expression& act_expr,
-                                                              dynet::Expression& rel_expr) {
+
+void Ballesteros15Model::ArcStandardFunction::perform_action(const unsigned& action,
+                                                             dynet::ComputationGraph& cg,
+                                                             ParseModel::LSTMBuilderType & a_lstm,
+                                                             ParseModel::LSTMBuilderType & s_lstm,
+                                                             ParseModel::LSTMBuilderType & q_lstm,
+                                                             Merge3Layer & composer,
+                                                             Ballesteros15Model::StateCheckpointImpl & cp,
+                                                             dynet::Expression & act_expr,
+                                                             dynet::Expression & rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
   if (ArcStandard::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
-    cp.buffer.pop_back();
-    cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-  } else if (ArcStandard::is_drop(action)) {
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else {
@@ -100,18 +97,17 @@ void ParserBallesteros15::ArcStandardFunction::perform_action(const unsigned& ac
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
 
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
   }
 }
-*/
 
 void Ballesteros15Model::ArcHybridFunction::perform_action(const unsigned& action,
                                                            dynet::ComputationGraph& cg,
-                                                           Ballesteros15Model::LSTMBuilderType & a_lstm,
-                                                           Ballesteros15Model::LSTMBuilderType & s_lstm,
-                                                           Ballesteros15Model::LSTMBuilderType & q_lstm,
+                                                           ParseModel::LSTMBuilderType & a_lstm,
+                                                           ParseModel::LSTMBuilderType & s_lstm,
+                                                           ParseModel::LSTMBuilderType & q_lstm,
                                                            Merge3Layer& composer,
                                                            Ballesteros15Model::StateCheckpointImpl & cp,
                                                            dynet::Expression& act_expr,
@@ -247,9 +243,8 @@ Ballesteros15Model::Ballesteros15Model(dynet::ParameterCollection & m,
   n_layers(n_layers), dim_lstm_in(dim_lstm_in), dim_hidden(dim_hidden) {
 
   std::string system_name = system.name();
-
   if (system_name == "arcstd") {
-    // sys_func = new ArcStandardFunction();
+    sys_func = new ArcStandardFunction();
   } else if (system_name == "arceager") {
     // sys_func = new ArcEagerFunction();
   } else if (system_name == "archybrid") {
@@ -280,50 +275,6 @@ dynet::Expression Ballesteros15Model::get_scores(ParseModel::StateCheckpoint * c
     q_lstm.get_h(cp->q_pointer).back(),
     a_lstm.get_h(cp->a_pointer).back())
   ));
-}
-
-void Ballesteros15Model::raw_to_input_units(const std::vector<std::string>& words,
-                                            const std::vector<std::string>& postags,
-                                            InputUnits & units) {
-  // The first element is the pseudo root.
-  units.clear();
-
-  Alphabet & word_map = AlphabetCollection::get()->word_map;
-  Alphabet & char_map = AlphabetCollection::get()->char_map;
-  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
-
-  InputUnit unit;
-  unit.wid = word_map.get(Corpus::ROOT);
-  unit.pid = pos_map.get(Corpus::ROOT);
-  unit.aux_wid = unit.wid;
-  unit.word = Corpus::ROOT;
-  unit.postag = Corpus::ROOT;
-  unit.lemma = Corpus::ROOT;
-  unit.feature = Corpus::ROOT;
-  units.push_back(unit);
-
-  for (unsigned i = 0; i < words.size(); ++i) {
-    const std::string & word = words[i];
-    const std::string & postag = postags[i];
-
-    unit.wid = (word_map.contains(word) ? word_map.get(word) : word_map.get(Corpus::UNK));
-    unit.pid = pos_map.get(postag);
-    unit.aux_wid = unit.wid;
-    unit.word = word;
-    unit.postag = postag;
-
-    unsigned cur = 0;
-    unit.cids.clear();
-    while (cur < word.size()) {
-      unsigned len = utf8_len(word[cur]);
-      std::string ch_str = word.substr(cur, len);
-      unit.cids.push_back(
-        char_map.contains(ch_str) ? char_map.get(ch_str) : char_map.get(Corpus::UNK)
-      );
-      cur += len;
-    }
-    units.push_back(unit);
-  }
 }
 
 ParseModel::StateCheckpoint * Ballesteros15Model::get_initial_checkpoint() {

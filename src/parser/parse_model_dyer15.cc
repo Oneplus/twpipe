@@ -1,23 +1,27 @@
-#include "parser_dyer15.h"
+#include "parse_model_dyer15.h"
 #include "dynet/expr.h"
-#include "corpus.h"
-#include "logging.h"
-#include "arceager.h"
+// #include "arceager.h"
 #include "arcstd.h"
 #include "archybrid.h"
-#include "swap.h"
+// #include "swap.h"
+#include "twpipe/corpus.h"
+#include "twpipe/logging.h"
+#include "twpipe/embedding.h"
 #include <vector>
 #include <random>
 
-void ParserDyer15::ArcEagerFunction::perform_action(const unsigned& action,
-                                                    dynet::ComputationGraph& cg,
-                                                    dynet::LSTMBuilder& a_lstm,
-                                                    dynet::LSTMBuilder& s_lstm,
-                                                    dynet::LSTMBuilder& q_lstm,
-                                                    Merge3Layer& composer,
-                                                    ParserDyer15::StateCheckpointImpl & cp,
-                                                    dynet::expr::Expression& act_expr,
-                                                    dynet::expr::Expression& rel_expr) {
+namespace twpipe {
+
+/*
+void Dyer15Model::ArcEagerFunction::perform_action(const unsigned& action,
+                                                   dynet::ComputationGraph& cg,
+                                                   LSTMBuilderType& a_lstm,
+                                                   LSTMBuilderType& s_lstm,
+                                                   LSTMBuilderType& q_lstm,
+                                                   Merge3Layer& composer,
+                                                   Dyer15Model::StateCheckpointImpl & cp,
+                                                   dynet::expr::Expression& act_expr,
+                                                   dynet::expr::Expression& rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
 
@@ -60,31 +64,28 @@ void ParserDyer15::ArcEagerFunction::perform_action(const unsigned& action,
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
   }
 }
-
-void ParserDyer15::ArcStandardFunction::perform_action(const unsigned& action,
-                                                       dynet::ComputationGraph& cg,
-                                                       dynet::LSTMBuilder& a_lstm, 
-                                                       dynet::LSTMBuilder& s_lstm, 
-                                                       dynet::LSTMBuilder& q_lstm, 
-                                                       Merge3Layer& composer,
-                                                       ParserDyer15::StateCheckpointImpl & cp,
-                                                       dynet::expr::Expression& act_expr,
-                                                       dynet::expr::Expression& rel_expr) {
+*/
+void Dyer15Model::ArcStandardFunction::perform_action(const unsigned& action,
+                                                      dynet::ComputationGraph& cg,
+                                                      Dyer15Model::LSTMBuilderType& a_lstm,
+                                                      Dyer15Model::LSTMBuilderType& s_lstm,
+                                                      Dyer15Model::LSTMBuilderType& q_lstm,
+                                                      Merge3Layer& composer,
+                                                      Dyer15Model::StateCheckpointImpl & cp,
+                                                      dynet::Expression & act_expr,
+                                                      dynet::Expression & rel_expr) {
 
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
   if (ArcStandard::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-  } else if (ArcStandard::is_drop(action)) {
-    cp.buffer.pop_back();
-    cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     if (ArcStandard::is_left(action)) {
       hed_expr = cp.stack.back();
       mod_expr = cp.stack[cp.stack.size() - 2];
@@ -96,35 +97,32 @@ void ParserDyer15::ArcStandardFunction::perform_action(const unsigned& action,
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
 
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
   }
 }
 
-void ParserDyer15::ArcHybridFunction::perform_action(const unsigned& action,
-                                                     dynet::ComputationGraph& cg,
-                                                     dynet::LSTMBuilder& a_lstm, 
-                                                     dynet::LSTMBuilder& s_lstm, 
-                                                     dynet::LSTMBuilder& q_lstm, 
-                                                     Merge3Layer& composer,
-                                                     ParserDyer15::StateCheckpointImpl & cp,
-                                                     dynet::expr::Expression& act_expr,
-                                                     dynet::expr::Expression& rel_expr) {
+void Dyer15Model::ArcHybridFunction::perform_action(const unsigned& action,
+                                                    dynet::ComputationGraph& cg,
+                                                    ParseModel::LSTMBuilderType& a_lstm,
+                                                    ParseModel::LSTMBuilderType& s_lstm,
+                                                    ParseModel::LSTMBuilderType& q_lstm,
+                                                    Merge3Layer& composer,
+                                                    Dyer15Model::StateCheckpointImpl & cp,
+                                                    dynet::Expression& act_expr,
+                                                    dynet::Expression& rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
-  if (ArcHybrid::is_drop(action)) {
-    cp.buffer.pop_back();
-    cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-  } else if (ArcHybrid::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+  if (ArcHybrid::is_shift(action)) {
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else if (ArcHybrid::is_left(action)) {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     hed_expr = cp.buffer.back();
     mod_expr = cp.stack.back();
 
@@ -132,11 +130,11 @@ void ParserDyer15::ArcHybridFunction::perform_action(const unsigned& action,
     cp.buffer.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-    cp.buffer.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.buffer.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     q_lstm.add_input(cp.q_pointer, cp.buffer.back());
     cp.q_pointer = q_lstm.state();
   } else {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     hed_expr = cp.stack[cp.stack.size() - 2];
     mod_expr = cp.stack.back();
 
@@ -144,21 +142,22 @@ void ParserDyer15::ArcHybridFunction::perform_action(const unsigned& action,
     cp.stack.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
   }
 }
 
-void ParserDyer15::SwapFunction::perform_action(const unsigned & action,
-                                                dynet::ComputationGraph & cg,
-                                                dynet::LSTMBuilder & a_lstm,
-                                                dynet::LSTMBuilder & s_lstm,
-                                                dynet::LSTMBuilder & q_lstm,
-                                                Merge3Layer & composer,
-                                                ParserDyer15::StateCheckpointImpl & cp,
-                                                dynet::expr::Expression & act_expr,
-                                                dynet::expr::Expression & rel_expr) {
+/*
+void Dyer15Model::SwapFunction::perform_action(const unsigned & action,
+                                               dynet::ComputationGraph & cg,
+                                               LSTMBuilderType & a_lstm,
+                                               LSTMBuilderType & s_lstm,
+                                               LSTMBuilderType & q_lstm,
+                                               Merge3Layer & composer,
+                                               Dyer15Model::StateCheckpointImpl & cp,
+                                               dynet::expr::Expression & act_expr,
+                                               dynet::expr::Expression & rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
   if (Swap::is_shift(action)) {
@@ -200,32 +199,29 @@ void ParserDyer15::SwapFunction::perform_action(const unsigned & action,
     cp.s_pointer = s_lstm.state();
   }
 }
-
-ParserDyer15::ParserDyer15(dynet::Model& m,
-                           unsigned size_w,
-                           unsigned dim_w,
-                           unsigned size_p,
-                           unsigned dim_p,
-                           unsigned size_t,
-                           unsigned dim_t,
-                           unsigned size_a,
-                           unsigned dim_a,
-                           unsigned dim_l,
-                           unsigned n_layers,
-                           unsigned dim_lstm_in,
-                           unsigned dim_hidden,
-                           const std::string& system_name,
-                           TransitionSystem& system,
-                           const std::unordered_map<unsigned, std::vector<float>>& embedding) :
-  Parser(m, system, system_name),
+*/
+Dyer15Model::Dyer15Model(dynet::ParameterCollection & m,
+                         unsigned size_w,
+                         unsigned dim_w,
+                         unsigned size_p,
+                         unsigned dim_p,
+                         unsigned dim_t,
+                         unsigned size_a,
+                         unsigned dim_a,
+                         unsigned dim_l,
+                         unsigned n_layers,
+                         unsigned dim_lstm_in,
+                         unsigned dim_hidden,
+                         TransitionSystem& system) :
+  ParseModel(m, system),
   s_lstm(n_layers, dim_lstm_in, dim_hidden, m),
   q_lstm(n_layers, dim_lstm_in, dim_hidden, m),
   a_lstm(n_layers, dim_a, dim_hidden, m),
   word_emb(m, size_w, dim_w),
   pos_emb(m, size_p, dim_p),
-  preword_emb(m, size_t, dim_t, false),
   act_emb(m, size_a, dim_a),
   rel_emb(m, size_a, dim_l),
+  pretrain_emb(dim_t),
   merge_input(m, dim_w, dim_p, dim_t, dim_lstm_in),
   merge(m, dim_hidden, dim_hidden, dim_hidden, dim_hidden),
   composer(m, dim_lstm_in, dim_lstm_in, dim_l, dim_lstm_in),
@@ -234,47 +230,44 @@ ParserDyer15::ParserDyer15(dynet::Model& m,
   p_buffer_guard(m.add_parameters({ dim_lstm_in })),
   p_stack_guard(m.add_parameters({ dim_lstm_in })),
   sys_func(nullptr),
-  pretrained(embedding),
   size_w(size_w), dim_w(dim_w),
   size_p(size_p), dim_p(dim_p),
-  size_t(size_t), dim_t(dim_t),
+  dim_t(dim_t),
   size_a(size_a), dim_a(dim_a), dim_l(dim_l),
   n_layers(n_layers), dim_lstm_in(dim_lstm_in), dim_hidden(dim_hidden) {
 
-  for (auto it : pretrained) {
-    preword_emb.p_labels.initialize(it.first, it.second);
-  }
+  std::string system_name = system.name();
 
   if (system_name == "arcstd") {
     sys_func = new ArcStandardFunction();
   } else if (system_name == "arceager") {
-    sys_func = new ArcEagerFunction();
+    // sys_func = new ArcEagerFunction();
   } else if (system_name == "archybrid") {
     sys_func = new ArcHybridFunction();
   } else if (system_name == "swap") {
-    sys_func = new SwapFunction();
+    // sys_func = new SwapFunction();
   } else {
     _ERROR << "Main:: Unknown transition system: " << system_name;
     exit(1);
   }
 }
 
-void ParserDyer15::perform_action(const unsigned& action,
-                                  dynet::ComputationGraph& cg,
-                                  State& state,
-                                  Parser::StateCheckpoint * checkpoint) {
+void Dyer15Model::perform_action(const unsigned& action,
+                                 dynet::ComputationGraph& cg,
+                                 State& state,
+                                 ParseModel::StateCheckpoint * checkpoint) {
   StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
-  dynet::expr::Expression act_repr = act_emb.embed(action);
-  dynet::expr::Expression rel_repr = rel_emb.embed(action);
+  dynet::Expression act_repr = act_emb.embed(action);
+  dynet::Expression rel_repr = rel_emb.embed(action);
   sys_func->perform_action(action, cg, a_lstm, s_lstm, q_lstm, composer, *cp, act_repr, rel_repr);
   sys.perform_action(state, action);
 }
 
-Parser::StateCheckpoint * ParserDyer15::get_initial_checkpoint() {
+Dyer15Model::StateCheckpoint * Dyer15Model::get_initial_checkpoint() {
   return new StateCheckpointImpl();
 }
 
-Parser::StateCheckpoint * ParserDyer15::copy_checkpoint(StateCheckpoint * checkpoint) {
+ParseModel::StateCheckpoint * Dyer15Model::copy_checkpoint(StateCheckpoint * checkpoint) {
   StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   StateCheckpointImpl * new_checkpoint = new StateCheckpointImpl();
   new_checkpoint->s_pointer = cp->s_pointer;
@@ -285,51 +278,57 @@ Parser::StateCheckpoint * ParserDyer15::copy_checkpoint(StateCheckpoint * checkp
   return new_checkpoint;
 }
 
-void ParserDyer15::destropy_checkpoint(StateCheckpoint * checkpoint) {
+void Dyer15Model::destropy_checkpoint(StateCheckpoint * checkpoint) {
   delete dynamic_cast<StateCheckpointImpl *>(checkpoint);
 }
 
-dynet::expr::Expression ParserDyer15::get_scores(Parser::StateCheckpoint * checkpoint) {
+dynet::Expression Dyer15Model::get_scores(ParseModel::StateCheckpoint * checkpoint) {
   StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
-  return scorer.get_output(dynet::expr::rectify(merge.get_output(
+  return scorer.get_output(dynet::rectify(merge.get_output(
     s_lstm.get_h(cp->s_pointer).back(),
     q_lstm.get_h(cp->q_pointer).back(),
     a_lstm.get_h(cp->a_pointer).back())
   ));
 }
 
-void ParserDyer15::new_graph(dynet::ComputationGraph& cg) {
+void Dyer15Model::new_graph(dynet::ComputationGraph& cg) {
   s_lstm.new_graph(cg);
   q_lstm.new_graph(cg);
   a_lstm.new_graph(cg);
 
   word_emb.new_graph(cg);
   pos_emb.new_graph(cg);
-  preword_emb.new_graph(cg);
+  pretrain_emb.new_graph(cg);
   act_emb.new_graph(cg);
   rel_emb.new_graph(cg);
- 
+
   merge_input.new_graph(cg);
   merge.new_graph(cg);
   composer.new_graph(cg);
-  scorer.new_graph(cg); 
+  scorer.new_graph(cg);
 
-  action_start = dynet::expr::parameter(cg, p_action_start);
-  buffer_guard = dynet::expr::parameter(cg, p_buffer_guard);
-  stack_guard = dynet::expr::parameter(cg, p_stack_guard);
+  action_start = dynet::parameter(cg, p_action_start);
+  buffer_guard = dynet::parameter(cg, p_buffer_guard);
+  stack_guard = dynet::parameter(cg, p_stack_guard);
 }
 
-void ParserDyer15::initialize_parser(dynet::ComputationGraph & cg,
-                                     const InputUnits & input,
-                                     Parser::StateCheckpoint * checkpoint) {
+void Dyer15Model::initialize_parser(dynet::ComputationGraph & cg,
+                                    const InputUnits & input,
+                                    ParseModel::StateCheckpoint * checkpoint) {
   StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  
+  std::vector<std::vector<float>> embeddings;
+  unsigned len = input.size();
+  std::vector<std::string> words(len);
+  // The first unit is pseduo root.
+  for (unsigned i = 0; i < len; ++i) { words[i] = input[i].word; }
+  WordEmbedding::get()->render(words, embeddings);
 
   s_lstm.start_new_sequence();
   q_lstm.start_new_sequence();
   a_lstm.start_new_sequence();
   a_lstm.add_input(action_start);
 
-  unsigned len = input.size();
   cp->stack.clear();
   cp->buffer.resize(len + 1);
 
@@ -339,11 +338,9 @@ void ParserDyer15::initialize_parser(dynet::ComputationGraph & cg,
   for (unsigned i = 0; i < len; ++i) {
     unsigned wid = input[i].wid;
     unsigned pid = input[i].pid;
-    unsigned nid = input[i].nid;
-    if (!pretrained.count(nid)) { nid = 0; }
 
-    cp->buffer[len - i] = dynet::expr::rectify(merge_input.get_output(
-      word_emb.embed(wid), pos_emb.embed(pid), preword_emb.embed(nid)
+    cp->buffer[len - i] = dynet::rectify(merge_input.get_output(
+      word_emb.embed(wid), pos_emb.embed(pid), pretrain_emb.get_output(embeddings[i])
     ));
   }
 
@@ -351,10 +348,12 @@ void ParserDyer15::initialize_parser(dynet::ComputationGraph & cg,
   for (unsigned i = 0; i <= len; ++i) {
     q_lstm.add_input(cp->buffer[i]);
   }
-  
+
   s_lstm.add_input(stack_guard);
   cp->stack.push_back(stack_guard);
   cp->a_pointer = a_lstm.state();
   cp->s_pointer = s_lstm.state();
   cp->q_pointer = q_lstm.state();
+}
+
 }

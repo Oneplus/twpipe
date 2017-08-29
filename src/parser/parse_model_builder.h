@@ -15,10 +15,13 @@ struct ParseModelBuilder {
   std::string system_name;
   std::string arch_name;
 
+  unsigned char_size;
   unsigned char_dim;
+  unsigned word_size;
   unsigned word_dim;
+  unsigned pos_size;
   unsigned pos_dim;
-  unsigned pretrained_dim;
+  unsigned embed_dim;
   unsigned n_actions;
   unsigned action_dim;
   unsigned label_dim;

@@ -3,17 +3,19 @@
 
 #include "state.h"
 #include "system.h"
-#include "twpipe/layer.h"
+#include "dynet/lstm.h"
 #include "twpipe/corpus.h"
 #include <vector>
 #include <unordered_map>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
-
+  
 namespace twpipe {
 
 struct ParseModel {
+  typedef dynet::CoupledLSTMBuilder LSTMBuilderType;
+
   static po::options_description get_options();
 
   struct StateCheckpoint {
@@ -66,9 +68,9 @@ struct ParseModel {
   /// Get the un-softmaxed scores from the LSTM-parser.
   virtual dynet::Expression get_scores(StateCheckpoint * checkpoint) = 0;
  
-  virtual void raw_to_input_units(const std::vector<std::string> & words,
-                                  const std::vector<std::string> & postags,
-                                  InputUnits & units) = 0;
+  void raw_to_input_units(const std::vector<std::string> & words,
+                          const std::vector<std::string> & postags,
+                          InputUnits & units);
 
   void parse_units_to_raw(const ParseUnits & units,
                           std::vector<unsigned> & heads,

@@ -15,7 +15,7 @@ ArcHybrid::ArcHybrid() {
     action_names.push_back("LEFT-" + map.get(i));
     action_names.push_back("RIGHT-" + map.get(i));
   }
-  _INFO << "[twpipe|parser|archybrid] show action names:";
+  _INFO << "[parse|archybrid] show action names:";
   for (const auto& action_name : action_names) {
     _INFO << "- " << action_name;
   }

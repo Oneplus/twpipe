@@ -82,6 +82,50 @@ void ParseModel::label(const std::vector<std::string> & words,
   BOOST_ASSERT_MSG(false, "not implemented.");
 }
 
+void ParseModel::raw_to_input_units(const std::vector<std::string>& words,
+                                    const std::vector<std::string>& postags,
+                                    InputUnits & units) {
+  // The first element is the pseudo root.
+  units.clear();
+
+  Alphabet & word_map = AlphabetCollection::get()->word_map;
+  Alphabet & char_map = AlphabetCollection::get()->char_map;
+  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+
+  InputUnit unit;
+  unit.wid = word_map.get(Corpus::ROOT);
+  unit.pid = pos_map.get(Corpus::ROOT);
+  unit.aux_wid = unit.wid;
+  unit.word = Corpus::ROOT;
+  unit.postag = Corpus::ROOT;
+  unit.lemma = Corpus::ROOT;
+  unit.feature = Corpus::ROOT;
+  units.push_back(unit);
+
+  for (unsigned i = 0; i < words.size(); ++i) {
+    const std::string & word = words[i];
+    const std::string & postag = postags[i];
+
+    unit.wid = (word_map.contains(word) ? word_map.get(word) : word_map.get(Corpus::UNK));
+    unit.pid = pos_map.get(postag);
+    unit.aux_wid = unit.wid;
+    unit.word = word;
+    unit.postag = postag;
+
+    unsigned cur = 0;
+    unit.cids.clear();
+    while (cur < word.size()) {
+      unsigned len = utf8_len(word[cur]);
+      std::string ch_str = word.substr(cur, len);
+      unit.cids.push_back(
+        char_map.contains(ch_str) ? char_map.get(ch_str) : char_map.get(Corpus::UNK)
+      );
+      cur += len;
+    }
+    units.push_back(unit);
+  }
+}
+
 void ParseModel::parse_units_to_raw(const ParseUnits & units,
                                     std::vector<unsigned>& heads,
                                     std::vector<std::string>& deprels,

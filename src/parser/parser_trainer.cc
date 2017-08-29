@@ -1,8 +1,8 @@
 #include "parser_trainer.h"
 #include "tree.h"
-// #include "evaluate.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
+#include "twpipe/model.h"
 
 namespace twpipe {
 
@@ -32,7 +32,7 @@ SupervisedTrainer::SupervisedTrainer(ParseModel & engine,
   } else if (supervised_oracle == "dynamic") {
     oracle_type = kDynamic;
   } else {
-    _ERROR << "[twpipe|parser] unknown oracle :" << supervised_oracle;
+    _ERROR << "[parse|train] unknown oracle :" << supervised_oracle;
   }
 
   std::string supervised_objective_name = conf["parse-supervised-objective"].as<std::string>();
@@ -45,18 +45,18 @@ SupervisedTrainer::SupervisedTrainer(ParseModel & engine,
   } else {
     objective_type = kStructure;
     if (!conf.count("parse-beam-size") || conf["parse-beam-size"].as<unsigned>() <= 1) {
-      _ERROR << "[twpipe|parser] set structure learning objective, but parse-beam-size was not set.";
+      _ERROR << "[parse|train] set structure learning objective, but parse-beam-size was not set.";
       exit(1);
     }
   }
-  _INFO << "[twpipe|parser] learning objective " << supervised_objective_name;
+  _INFO << "[parse|train] learning objective " << supervised_objective_name;
 
   if (oracle_type == kDynamic) {
     do_pretrain_iter = conf["parse-supervised-do-pretrain-iter"].as<unsigned>();
     do_explore_prob = conf["parse-supervised-do-explore-prob"].as<float>();
-    _INFO << "[twpipe|parser] use dynamic oracle training";
-    _INFO << "[twpipe|parser] pretrain iteration = " << do_pretrain_iter;
-    _INFO << "[twpipe|parser] explore prob = " << do_explore_prob;
+    _INFO << "[parse|train] use dynamic oracle training";
+    _INFO << "[parse|train] pretrain iteration = " << do_pretrain_iter;
+    _INFO << "[parse|train] explore prob = " << do_explore_prob;
   }
 
   beam_size = (conf.count("parse-beam-size") ? conf["parse-beam-size"].as<unsigned>() : 0);
@@ -68,7 +68,7 @@ SupervisedTrainer::SupervisedTrainer(ParseModel & engine,
 }
 
 void SupervisedTrainer::train(Corpus& corpus) {
-  _INFO << "[twpipe|parser] start lstm-parser supervised training.";
+  _INFO << "[parse|train] start lstm-parser supervised training.";
   Noisifier noisifier(corpus, noisify_method_name, singleton_dropout_prob);
   
   dynet::Trainer* trainer = opt_builder.build(engine.model);
@@ -84,11 +84,11 @@ void SupervisedTrainer::train(Corpus& corpus) {
 
   unsigned logc = 0;
   bool use_beam_search = (beam_size > 1);
-  _INFO << "[twpipe|parser] will stop after " << max_iter << " iterations.";
+  _INFO << "[parse|train] will stop after " << max_iter << " iterations.";
   
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
     llh = 0;
-    _INFO << "[twpipe|parser] start training iteration #" << iter << ", shuffled.";
+    _INFO << "[parse|train] start training iteration #" << iter << ", shuffled.";
     std::shuffle(order.begin(), order.end(), (*dynet::rndeng));
 
     for (unsigned sid : order) {
@@ -107,7 +107,7 @@ void SupervisedTrainer::train(Corpus& corpus) {
       noisifier.denoisify(input_units);
     }
 
-    _INFO << "[twpipe|parser] end of iter #" << iter << " loss " << llh;
+    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh;
     float n_recall = 0., n_total = 0.;
     for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
       const Instance & inst = corpus.devel_data.at(sid);
@@ -133,8 +133,8 @@ void SupervisedTrainer::train(Corpus& corpus) {
     float las = n_recall / n_total;
     if (las > best_las) {
       best_las = las;
-      _INFO << "[twpipe|parser] new best record achieved: " << best_las << ", saved.";
-      // dynet::save_dynet_model(name, (&model));
+      _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+      Model::get()->to_json(Model::kParserName, engine.model);
     }
     trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
   }
@@ -377,11 +377,11 @@ void SupervisedTrainer::get_orders(Corpus& corpus,
   for (unsigned i = 0; i < corpus.training_data.size(); ++i) {
     const ParseUnits& parse_units = corpus.training_data[i].parse_units;
     if (!DependencyUtils::is_tree(parse_units)) {
-      _INFO << "[twpipe|parser|get_orders] #" << i << " not a tree, skipped.";
+      _INFO << "[parse|train|get_orders] #" << i << " not a tree, skipped.";
       continue;
     }
     if (!non_projective && !DependencyUtils::is_projective(parse_units)) {
-      _INFO << "[twpipe|parser|get_orders] #" << i << " not projective, skipped.";
+      _INFO << "[parse|train|get_orders] #" << i << " not projective, skipped.";
       continue;
     }
     order.push_back(i);

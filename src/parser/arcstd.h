@@ -9,7 +9,9 @@ struct ArcStandard : public TransitionSystem {
   unsigned n_actions;
   std::vector<std::string> action_names;
 
-  ArcStandard(const Alphabet& deprel_map);
+  ArcStandard();
+
+  std::string name() const override;
 
   std::string name(unsigned id) const override;
 
@@ -43,17 +45,14 @@ struct ArcStandard : public TransitionSystem {
                           std::vector<unsigned>& actions) override;
 
   void shift_unsafe(State& state) const;
-  void drop_unsafe(State& state) const;
   void left_unsafe(State& state, const unsigned& deprel) const;
   void right_unsafe(State& state, const unsigned& deprel) const;
 
   static bool is_shift(const unsigned& action);
-  static bool is_drop(const unsigned& action);
   static bool is_left(const unsigned& action);
   static bool is_right(const unsigned& action);
 
   unsigned get_shift_id() const;
-  unsigned get_drop_id() const;
   unsigned get_left_id(const unsigned& deprel) const;
   unsigned get_right_id(const unsigned& deprel) const;
   unsigned parse_label(const unsigned& action) const;
