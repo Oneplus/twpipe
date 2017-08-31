@@ -23,6 +23,8 @@ struct GloveNormalizer {
 };
 
 struct OwoputiNormalizer {
+  static std::string punct_chars;
+  static std::string entity;
   static std::string url_start_1;
   static std::string common_tlds;
   static std::string cc_tlds;
@@ -32,7 +34,12 @@ struct OwoputiNormalizer {
   static std::string url_end;
   static std::string bound;
   static std::string email;
-  
+  static std::string url;
+  static std::string at_signs_chars;
+  static std::string valid_mention_or_list;
+  static boost::regex url_regex;
+  static boost::regex mention_regex;
+
   static std::string normalize(const std::string & word);
 };
 

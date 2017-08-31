@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
       dynet::ParameterCollection pos_model;
       dynet::ParameterCollection par_model;
 
-      bool load_postag_model = (conf.count("postag") || conf.count("parse"));
+      bool load_postag_model = (conf.count("postag") > 0);
       bool load_parse_model = (conf.count("parse") > 0);
       
       if (load_postag_model) {
@@ -260,12 +260,19 @@ int main(int argc, char* argv[]) {
       std::string buffer;
       std::ifstream ifs(conf["input-file"].as<std::string>());
       float n_pos_corr = 0.;
+      float n_uas_corr = 0.;
+      float n_las_corr = 0.;
       float n_total = 0.;
       while (std::getline(ifs, buffer)) {
         boost::algorithm::trim(buffer);
         if (buffer.empty()) {
           if (pos_engine != nullptr) {
             pos_engine->postag(tokens, postags);
+          } else {
+            postags.resize(gold_postags.size());
+            for (unsigned i = 0; i < gold_postags.size(); ++i) {
+              postags[i] = gold_postags[i];
+            }
           }
           if (par_engine != nullptr) {
             par_engine->predict(tokens, postags, heads, deprels);
@@ -273,16 +280,30 @@ int main(int argc, char* argv[]) {
 
           std::cout << "# text = " << sentence << "\n";
           for (unsigned i = 0; i < tokens.size(); ++i) {
-            std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
-              << postags[i] << "\t_\tGoldPOS=" << gold_postags[i] << "\t_\t_\t_\n";
+            std::cout << i + 1 << "\t" << tokens[i] << "\t_\t";
+            if (pos_engine == nullptr) {
+              std::cout << gold_postags[i] << "\t_\t_\t";
+            } else {
+              std::cout << postags[i] << "\t_\tGoldPOS=" << gold_postags[i] << "\t";
+            }
+            if (par_engine == nullptr) {
+              std::cout << "_\t_\t_\t_\n";
+            } else {
+              std::cout << heads[i] << "\t" << deprels[i] << "\t_\t_\n";
+            }
             if (postags[i] == gold_postags[i]) { n_pos_corr += 1.; }
+            if (heads[i] == gold_heads[i]) {
+              n_uas_corr += 1.; 
+              if (deprels[i] == gold_deprels[i]) { n_las_corr += 1.; }
+            }
             n_total += 1.;
           }
           std::cout << "\n";
 
           tokens.clear();
-          postags.clear();
-          gold_postags.clear();
+          postags.clear(); gold_postags.clear();
+          heads.clear(); gold_heads.clear();
+          deprels.clear(); gold_deprels.clear();
         } else if (buffer[0] == '#') {
           if (boost::algorithm::starts_with(buffer, "# text = ")) { sentence = buffer.substr(9); }
         } else {
@@ -290,9 +311,13 @@ int main(int argc, char* argv[]) {
           boost::algorithm::split(data, buffer, boost::is_any_of("\t "));
           tokens.push_back(data[1]);
           gold_postags.push_back(data[3]);
+          gold_heads.push_back(boost::lexical_cast<unsigned>(data[6]));
+          gold_deprels.push_back(data[7]);
         }
       }
       _INFO << "[evaluate] postag accuracy: " << n_pos_corr / n_total;
+      _INFO << "[evaluate] UAS accuracy: " << n_uas_corr / n_total;
+      _INFO << "[evaluate] LAS accuracy: " << n_las_corr / n_total;
     }
   }
   return 0;

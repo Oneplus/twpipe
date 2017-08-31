@@ -1,6 +1,7 @@
 #include "cluster.h"
 #include "logging.h"
 #include "corpus.h"
+#include "normalizer.h"
 #include <iostream>
 #include <fstream>
 
@@ -56,7 +57,7 @@ void WordCluster::render(const std::vector<std::string>& words,
                          std::vector<std::string>& values) {
   values.clear();
   for (const auto & word : words) {
-    auto it = cluster.find(word);
+    auto it = cluster.find(OwoputiNormalizer::normalize(word));
     values.push_back(it == cluster.end() ? Corpus::UNK : it->second);
   }
 }

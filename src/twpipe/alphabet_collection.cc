@@ -22,12 +22,14 @@ void AlphabetCollection::stat() {
 
 void AlphabetCollection::to_json() {
   Model::get()->to_json("char-map", char_map);
+  Model::get()->to_json("word-map", word_map);
   Model::get()->to_json("pos-map", pos_map);
   Model::get()->to_json("deprel-map", deprel_map);
 }
 
 void AlphabetCollection::from_json() {
   Model::get()->from_json("char-map", char_map);
+  Model::get()->from_json("word-map", word_map);
   Model::get()->from_json("pos-map", pos_map);
   Model::get()->from_json("deprel-map", deprel_map);
 }

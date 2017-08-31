@@ -194,20 +194,6 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
     label_dim =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "label-dim"));
 
-    engine = new Dyer15Model(model,
-                             word_size,
-                             word_dim,
-                             pos_size,
-                             pos_dim,
-                             embed_dim,
-                             system->num_actions(),
-                             action_dim,
-                             label_dim,
-                             n_layers,
-                             lstm_input_dim,
-                             hidden_dim,
-                             (*system));
-
   } else if (arch_name == "ballesteros15" || arch_name == "b15") {
     temp_size =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "n-chars"));
@@ -224,21 +210,6 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
     label_dim =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "label-dim"));
 
-    engine = new Ballesteros15Model(model,
-                                    char_size,
-                                    char_dim,
-                                    word_dim,
-                                    pos_size,
-                                    pos_dim,
-                                    embed_dim,
-                                    system->num_actions(),
-                                    action_dim,
-                                    label_dim,
-                                    n_layers,
-                                    lstm_input_dim,
-                                    hidden_dim,
-                                    (*system));
-
   } else if (arch_name == "kiperwasser16" || arch_name == "k16") {
     temp_size =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "n-words"));
@@ -251,22 +222,12 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
     word_dim =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "word-dim"));
     
-    engine = new Kiperwasser16Model(model,
-                                    word_size,
-                                    word_dim,
-                                    pos_size,
-                                    pos_dim,
-                                    embed_dim,
-                                    system->num_actions(),
-                                    n_layers,
-                                    lstm_input_dim,
-                                    hidden_dim,
-                                    (*system));
-
   } else {
     _ERROR << "[parse|model_builder] unknown architecture name: " << arch_name;
     exit(1);
   }
+  engine = build(model);
+  globals->from_json(Model::kParserName, model);
   return engine;
 }
 
