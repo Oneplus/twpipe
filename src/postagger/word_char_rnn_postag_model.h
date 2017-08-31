@@ -1,5 +1,5 @@
-#ifndef __TWPIPE_CHAR_POSTAG_MODEL_H__
-#define __TWPIPE_CHAR_POSTAG_MODEL_H__
+#ifndef __TWPIPE_WORD_CHAR_POSTAG_MODEL_H__
+#define __TWPIPE_WORD_CHAR_POSTAG_MODEL_H__
 
 #include "postag_model.h"
 #include "twpipe/layer.h"
@@ -12,11 +12,12 @@
 namespace twpipe {
 
 template <class RNNBuilderType>
-struct CharacterRNNPostagModel : public PostagModel {
+struct WordCharacterRNNPostagModel : public PostagModel {
   const static char* name;
   BiRNNLayer<RNNBuilderType> char_rnn;
   BiRNNLayer<RNNBuilderType> word_rnn;
   SymbolEmbedding char_embed;
+  SymbolEmbedding word_embed;
   SymbolEmbedding pos_embed;
   InputLayer embed_input;
   Merge3Layer merge;
@@ -26,24 +27,29 @@ struct CharacterRNNPostagModel : public PostagModel {
   unsigned char_dim;
   unsigned char_hidden_dim;
   unsigned char_n_layers;
+  unsigned word_size;
+  unsigned word_dim;
   unsigned word_hidden_dim;
   unsigned word_n_layers;
   unsigned pos_dim;
   unsigned root_pos_id;
 
-  CharacterRNNPostagModel(dynet::ParameterCollection & model,
-                          unsigned char_size,
-                          unsigned char_dim,
-                          unsigned char_hidden_dim,
-                          unsigned char_n_layers,
-                          unsigned embed_dim,
-                          unsigned word_hidden_dim,
-                          unsigned word_n_layers,
-                          unsigned pos_dim) :
+  WordCharacterRNNPostagModel(dynet::ParameterCollection & model,
+                              unsigned char_size,
+                              unsigned char_dim,
+                              unsigned char_hidden_dim,
+                              unsigned char_n_layers,
+                              unsigned word_size,
+                              unsigned word_dim,
+                              unsigned embed_dim,
+                              unsigned word_hidden_dim,
+                              unsigned word_n_layers,
+                              unsigned pos_dim) :
     PostagModel(model),
     char_rnn(model, char_n_layers, char_dim, char_hidden_dim, false),
-    word_rnn(model, word_n_layers, char_hidden_dim + char_hidden_dim + embed_dim, word_hidden_dim),
+    word_rnn(model, word_n_layers, char_hidden_dim * 2 + word_dim + embed_dim, word_hidden_dim),
     char_embed(model, char_size, char_dim),
+    word_embed(model, word_size, word_dim),
     pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
     embed_input(embed_dim),
     merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
@@ -52,6 +58,8 @@ struct CharacterRNNPostagModel : public PostagModel {
     char_dim(char_dim),
     char_hidden_dim(char_hidden_dim),
     char_n_layers(char_n_layers),
+    word_size(word_size),
+    word_dim(word_dim),
     word_hidden_dim(word_hidden_dim),
     word_n_layers(word_n_layers),
     pos_dim(pos_dim) {
@@ -60,6 +68,8 @@ struct CharacterRNNPostagModel : public PostagModel {
     _INFO << "[postag|model] character dimension = " << char_dim;
     _INFO << "[postag|model] character rnn hidden dimension = " << char_hidden_dim;
     _INFO << "[postag|model] character rnn number layers = " << char_n_layers;
+    _INFO << "[postag|model] number of word types = " << word_size;
+    _INFO << "[postag|model] word dimension = " << word_dim;
     _INFO << "[postag|model] pre-trained word embedding dimension = " << embed_dim;
     _INFO << "[postag|model] word rnn hidden dimension = " << word_hidden_dim;
     _INFO << "[postag|model] word rnn number layers = " << word_n_layers;
@@ -70,8 +80,9 @@ struct CharacterRNNPostagModel : public PostagModel {
 
   void new_graph(dynet::ComputationGraph & cg) override {
     char_rnn.new_graph(cg);
-    word_rnn.new_graph(cg);
     char_embed.new_graph(cg);
+    word_rnn.new_graph(cg);
+    word_embed.new_graph(cg);
     pos_embed.new_graph(cg);
     embed_input.new_graph(cg);
     merge.new_graph(cg);
@@ -88,8 +99,13 @@ struct CharacterRNNPostagModel : public PostagModel {
     unsigned n_words = words.size();
     std::vector<dynet::Expression> word_exprs(n_words);
 
+    unsigned unk = AlphabetCollection::get()->word_map.get(Corpus::UNK);
     for (unsigned i = 0; i < n_words; ++i) {
       std::string word = words[i];
+      unsigned wid = unk;
+      if (AlphabetCollection::get()->word_map.contains(word)) {
+        wid = AlphabetCollection::get()->word_map.get(word);
+      }
       unsigned len = 0;
       std::vector<unsigned> cids;
       for (unsigned j = 0; j < word.size(); j += len) {
@@ -106,7 +122,12 @@ struct CharacterRNNPostagModel : public PostagModel {
       }
       char_rnn.add_inputs(char_exprs);
       auto payload = char_rnn.get_final();
-      word_exprs[i] = dynet::concatenate({ payload.first, payload.second, embed_input.get_output(embeddings[i]) });
+      word_exprs[i] = dynet::concatenate({
+        payload.first,
+        payload.second,
+        word_embed.embed(wid),
+        embed_input.get_output(embeddings[i])
+      });
     }
 
     word_rnn.add_inputs(word_exprs);
@@ -117,7 +138,7 @@ struct CharacterRNNPostagModel : public PostagModel {
       dynet::Expression logits = dense.get_output(dynet::rectify(
         merge.get_output(payload.first, payload.second, pos_embed.embed(prev_label))
       ));
-      std::vector<float> scores = dynet::as_vector((char_embed.cg)->get_value(logits));
+      std::vector<float> scores = dynet::as_vector((word_embed.cg)->get_value(logits));
       unsigned label = std::max_element(scores.begin(), scores.end()) - scores.begin();
 
       tags[i] = pos_map.get(label);
@@ -150,7 +171,11 @@ struct CharacterRNNPostagModel : public PostagModel {
       }
       char_rnn.add_inputs(char_exprs);
       auto payload = char_rnn.get_final();
-      word_exprs[i - 1] = dynet::concatenate({ payload.first, payload.second, embed_input.get_output(embeddings[i - 1]) });
+      word_exprs[i - 1] = dynet::concatenate({ 
+        payload.first,
+        payload.second,
+        word_embed.embed(input_units[i].wid),
+        embed_input.get_output(embeddings[i - 1]) });
       labels[i - 1] = input_units[i].pid;
     }
 
@@ -170,8 +195,8 @@ struct CharacterRNNPostagModel : public PostagModel {
   }
 };
 
-typedef CharacterRNNPostagModel<dynet::GRUBuilder> CharacterGRUPostagModel;
-typedef CharacterRNNPostagModel<dynet::CoupledLSTMBuilder> CharacterLSTMPostagModel;
+typedef WordCharacterRNNPostagModel<dynet::GRUBuilder> WordCharacterGRUPostagModel;
+typedef WordCharacterRNNPostagModel<dynet::CoupledLSTMBuilder> WordCharacterLSTMPostagModel;
 
 }
 

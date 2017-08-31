@@ -82,6 +82,7 @@ void PostaggerTrainer::train(const Corpus & corpus) {
     trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
   }
 
+  _INFO << "[postag|train] training is done, best accuracy is: " << best_acc;
   delete trainer;
 }
 

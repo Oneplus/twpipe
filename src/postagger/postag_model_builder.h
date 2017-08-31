@@ -2,9 +2,7 @@
 #define __TWPIPE_POSTAG_MODEL_BUILDER_H__
 
 #include <boost/program_options.hpp>
-#include "char_rnn_postag_model.h"
-#include "char_rnn_crf_postag_model.h"
-#include "char_rnn_wcluster_postag_model.h"
+#include "postag_model.h"
 
 namespace po = boost::program_options;
 
@@ -17,11 +15,17 @@ struct PostagModelBuilder {
     kCharacterGRUPostagCRFModel,
     kCharacterLSTMPostagCRFModel,
     kCharacterClusterGRUPostagModel,
-    kCharacterClusterLSTMPostagModel
+    kCharacterClusterLSTMPostagModel,
+    kWordGRUPostagModel,
+    kWordLSTMPostagModel,
+    kWordCharacterGRUPostagModel,
+    kWordCharacterLSTMPostagModel
   };
 
   ModelType model_type;
   std::string model_name;
+  unsigned word_size;
+  unsigned word_dim;
   unsigned char_size;
   unsigned char_dim;
   unsigned char_hidden_dim;
@@ -42,6 +46,8 @@ struct PostagModelBuilder {
   void to_json();
 
   PostagModel * from_json(dynet::ParameterCollection & model);
+
+  ModelType get_model_type(const std::string & model_name);
 };
 
 }

@@ -69,7 +69,10 @@ void Corpus::load_training_data(const std::string& filename) {
   pos_map.insert(Corpus::ROOT);
 
   std::ifstream in(filename);
-  BOOST_ASSERT_MSG(in, "[corpus] failed to open the training file.");
+  if (!in) {
+    _ERROR << "[corpus] failed to open the training file.";
+    exit(1);
+  }
 
   n_train = 0;
   std::string data = "";
@@ -102,7 +105,10 @@ void Corpus::load_devel_data(const std::string& filename) {
                    "[corpus] BAD0 and UNK should be inserted before loading devel data.");
 
   std::ifstream in(filename);
-  BOOST_ASSERT_MSG(in, "[corpus] failed to open the devel file.");
+  if (!in) {
+    _ERROR << "[corpus] failed to open the devel file.";
+    exit(1);
+  }
 
   n_devel = 0;
   std::string data = "";
