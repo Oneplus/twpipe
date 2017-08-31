@@ -42,6 +42,7 @@ struct WordRNNPostagModel : public PostagModel {
     embed_input(embed_dim),
     merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
     dense(model, word_hidden_dim, AlphabetCollection::get()->pos_map.size()),
+    word_size(word_size),
     word_dim(word_dim),
     word_hidden_dim(word_hidden_dim),
     word_n_layers(word_n_layers),
@@ -67,7 +68,6 @@ struct WordRNNPostagModel : public PostagModel {
   }
 
   void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
-    Alphabet & char_map = AlphabetCollection::get()->char_map;
     Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     std::vector<std::vector<float>> embeddings;

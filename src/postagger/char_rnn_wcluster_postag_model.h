@@ -31,7 +31,6 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
   unsigned char_dim;
   unsigned char_hidden_dim;
   unsigned char_n_layers;
-  unsigned word_dim;
   unsigned word_hidden_dim;
   unsigned word_n_layers;
   unsigned cluster_dim;
@@ -62,6 +61,7 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
     embed_input(embed_dim),
     merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
     dense(model, word_hidden_dim, AlphabetCollection::get()->pos_map.size()),
+    p_unk_cluster(model.add_parameters({cluster_hidden_dim})),
     char_size(char_size),
     char_dim(char_dim),
     char_hidden_dim(char_hidden_dim),
@@ -71,7 +71,6 @@ struct CharacterRNNWithClusterPostagModel : public PostagModel {
     cluster_dim(cluster_dim),
     cluster_hidden_dim(cluster_hidden_dim),
     cluster_n_layers(cluster_n_layers),
-    p_unk_cluster(model.add_parameters({cluster_hidden_dim})),
     pos_dim(pos_dim) {
     _INFO << "[postag|model] name = " << name;
     _INFO << "[postag|model] number of character types = " << char_size;
