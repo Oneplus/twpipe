@@ -209,10 +209,10 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
                              (*system));
 
   } else if (arch_name == "ballesteros15" || arch_name == "b15") {
-    char_size =
+    temp_size =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "n-chars"));
     if (char_size == 0) {
-      char_size = char_size;
+      char_size = temp_size;
     } else {
       BOOST_ASSERT_MSG(char_size == temp_size, "[parse|model_builder] word-size mismatch!");
     }

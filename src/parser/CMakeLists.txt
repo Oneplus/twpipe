@@ -4,8 +4,6 @@ add_library(twpipe_parser
     tree.h
     noisify.cc
     noisify.h
-    #evaluate.cc
-    #evaluate.h
     state.h
     state.cc
     arcstd.cc
@@ -17,8 +15,6 @@ add_library(twpipe_parser
     #swap.cc
     #swap.h
     system.h
-    #system_builder.cc
-    #system_builder.h
     parse_model.cc
     parse_model.h
     parse_model_ballesteros15.cc
@@ -31,8 +27,6 @@ add_library(twpipe_parser
     parse_model_builder.h
     parser_trainer.cc
     parser_trainer.h
-    #parser_trainer.h
-    #parser_trainer.cc
     )
 
 target_link_libraries (twpipe_parser

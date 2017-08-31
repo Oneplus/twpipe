@@ -88,7 +88,7 @@ Kiperwasser16Model::Kiperwasser16Model(dynet::ParameterCollection & m,
   sys_func(nullptr),
   size_w(size_w), dim_w(dim_w),
   size_p(size_p), dim_p(dim_p),
-  size_t(size_t), dim_t(dim_t),
+  dim_t(dim_t),
   size_a(size_a),
   n_layers(n_layers), dim_lstm_in(dim_lstm_in), dim_hidden(dim_hidden) {
 
@@ -125,7 +125,7 @@ void Kiperwasser16Model::new_graph(dynet::ComputationGraph & cg) {
 void Kiperwasser16Model::initialize_parser(dynet::ComputationGraph & cg,
                                            const InputUnits & input,
                                            ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
 
   std::vector<std::vector<float>> embeddings;
   unsigned len = input.size();
@@ -141,7 +141,6 @@ void Kiperwasser16Model::initialize_parser(dynet::ComputationGraph & cg,
   for (unsigned i = 0; i < len; ++i) {
     unsigned wid = input[i].wid;
     unsigned pid = input[i].pid;
-    unsigned aux_wid = input[i].aux_wid;
 
     lstm_input[i] = dynet::rectify(merge_input.get_output(
       word_emb.embed(wid), pos_emb.embed(pid), pretrain_emb.get_output(embeddings[i])));
@@ -171,7 +170,7 @@ void Kiperwasser16Model::perform_action(const unsigned & action,
                                         dynet::ComputationGraph & cg,
                                         State & state,
                                         ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   sys.perform_action(state, action);
   sys_func->extract_feature(encoded, empty, *cp, state);
 }
@@ -181,8 +180,8 @@ ParseModel::StateCheckpoint * Kiperwasser16Model::get_initial_checkpoint() {
 }
 
 ParseModel::StateCheckpoint * Kiperwasser16Model::copy_checkpoint(StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
-  StateCheckpointImpl * new_checkpoint = new StateCheckpointImpl();
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * new_checkpoint = new StateCheckpointImpl();
   new_checkpoint->f0 = cp->f0;
   new_checkpoint->f1 = cp->f1;
   new_checkpoint->f2 = cp->f2;
@@ -195,7 +194,7 @@ void Kiperwasser16Model::destropy_checkpoint(StateCheckpoint * checkpoint) {
 }
 
 dynet::Expression Kiperwasser16Model::get_scores(ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   return scorer.get_output(dynet::tanh(merge.get_output(cp->f0, cp->f1, cp->f2, cp->f3)));
 }
 

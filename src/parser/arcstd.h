@@ -1,5 +1,5 @@
 #ifndef __TWPIPE_PARSER_ARCSTD_H__
-#define __TWPIPE_PRASER_ARCSTD_H__
+#define __TWPIPE_PARSER_ARCSTD_H__
 
 #include "system.h"
 

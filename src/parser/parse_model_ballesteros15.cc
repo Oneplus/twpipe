@@ -261,7 +261,7 @@ void Ballesteros15Model::perform_action(const unsigned& action,
                                          dynet::ComputationGraph& cg,
                                          State& state,
                                          ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   dynet::Expression act_repr = act_emb.embed(action);
   dynet::Expression rel_repr = rel_emb.embed(action);
   sys_func->perform_action(action, cg, a_lstm, s_lstm, q_lstm, composer, *cp, act_repr, rel_repr);
@@ -269,7 +269,7 @@ void Ballesteros15Model::perform_action(const unsigned& action,
 }
 
 dynet::Expression Ballesteros15Model::get_scores(ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   return scorer.get_output(dynet::rectify(merge.get_output(
     s_lstm.get_h(cp->s_pointer).back(),
     q_lstm.get_h(cp->q_pointer).back(),
@@ -282,8 +282,8 @@ ParseModel::StateCheckpoint * Ballesteros15Model::get_initial_checkpoint() {
 }
 
 ParseModel::StateCheckpoint * Ballesteros15Model::copy_checkpoint(ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
-  StateCheckpointImpl * new_checkpoint = new StateCheckpointImpl();
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * new_checkpoint = new StateCheckpointImpl();
   new_checkpoint->s_pointer = cp->s_pointer;
   new_checkpoint->q_pointer = cp->q_pointer;
   new_checkpoint->a_pointer = cp->a_pointer;
@@ -325,7 +325,7 @@ void Ballesteros15Model::new_graph(dynet::ComputationGraph& cg) {
 void Ballesteros15Model::initialize_parser(dynet::ComputationGraph & cg,
                                            const InputUnits & input,
                                            ParseModel::StateCheckpoint * checkpoint) {
-  StateCheckpointImpl * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
+  auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
 
   std::vector<std::vector<float>> embeddings;
   unsigned len = input.size();

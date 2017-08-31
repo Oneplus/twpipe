@@ -82,7 +82,6 @@ void SupervisedTrainer::train(Corpus& corpus) {
   std::vector<unsigned> order;
   get_orders(corpus, order, allow_nonprojective);
 
-  unsigned logc = 0;
   bool use_beam_search = (beam_size > 1);
   _INFO << "[parse|train] will stop after " << max_iter << " iterations.";
   
