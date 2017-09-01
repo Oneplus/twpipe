@@ -20,7 +20,7 @@ struct TransitionSystem {
 
   virtual unsigned num_actions() const = 0;
 
-  virtual unsigned num_deprels() const = 0;
+  unsigned num_deprels();
 
   virtual void get_transition_costs(const State& state,
                                     const std::vector<unsigned>& actions,

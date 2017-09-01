@@ -9,6 +9,7 @@ add_executable (twpipe twpipe.cc)
 target_link_libraries (twpipe
     ${LIBS}
     dynet
+    dynet_layer
     twpipe_utils
     twpipe_tokenizer
     twpipe_postagger

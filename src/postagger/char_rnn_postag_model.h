@@ -2,12 +2,12 @@
 #define __TWPIPE_CHAR_POSTAG_MODEL_H__
 
 #include "postag_model.h"
-#include "twpipe/layer.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/embedding.h"
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
+#include "dynet_layer/layer.h"
 
 namespace twpipe {
 

@@ -17,4 +17,5 @@ add_library (twpipe_postagger
 target_link_libraries (twpipe_postagger
     ${LIBS}
     dynet
+    dynet_layer
     twpipe_utils)

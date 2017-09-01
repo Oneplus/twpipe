@@ -7,8 +7,6 @@ add_library (twpipe_utils
     alphabet_collection.cc
     corpus.h
     corpus.cc
-    layer.h
-    layer.cc
     optimizer_builder.h
     optimizer_builder.cc
     trainer.h

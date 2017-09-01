@@ -8,13 +8,14 @@ add_library(twpipe_parser
     state.cc
     arcstd.cc
     arcstd.h
-    #arceager.cc
-    #arceager.h
+    arceager.cc
+    arceager.h
     archybrid.cc
     archybrid.h
     #swap.cc
     #swap.h
     system.h
+    system.cc
     parse_model.cc
     parse_model.h
     parse_model_ballesteros15.cc
@@ -32,4 +33,5 @@ add_library(twpipe_parser
 target_link_libraries (twpipe_parser
     ${LIBS}
     dynet
+    dynet_layer
     twpipe_utils)

@@ -9,15 +9,15 @@ struct ArcEager : public TransitionSystem {
   unsigned n_actions;
   std::vector<std::string> action_names;
 
-  ArcEager(const Alphabet& deprel_map);
+  ArcEager();
+
+  std::string name() const override;
 
   std::string name(unsigned id) const override;
 
   bool allow_nonprojective() const override;
 
   unsigned num_actions() const override;
-
-  unsigned num_deprels() const override;
 
   void get_transition_costs(const State& state,
                             const std::vector<unsigned>& actions,

@@ -19,8 +19,6 @@ struct ArcHybrid : public TransitionSystem {
 
   unsigned num_actions() const override;
 
-  unsigned num_deprels() const override;
-
   void get_transition_costs(const State & state,
                             const std::vector<unsigned> & actions,
                             const std::vector<unsigned> & ref_heads,

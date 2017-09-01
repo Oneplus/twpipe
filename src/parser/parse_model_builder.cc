@@ -143,20 +143,6 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
   Model * globals = Model::get();
   system_name = globals->from_json(Model::kParserName, "system");
 
-  BOOST_ASSERT_MSG(system == nullptr,
-                   "[parse|model_builder] transition system should not be initialized.");
-  if (system_name == "arcstd") {
-    system = new ArcStandard();
-  } else if (system_name == "arceager") {
-    // sys = new ArcEager(corpus.deprel_map);
-  } else if (system_name == "archybrid") {
-    system = new ArcHybrid();
-  } else if (system_name == "swap") {
-    // sys = new Swap(corpus.deprel_map);
-  } else {
-    _ERROR << "[parse|model_builder] unknown transition system: " << system_name;
-    exit(1);
-  }
   _INFO << "[parse|model_builder] transition system: " << system_name;
   arch_name = globals->from_json(Model::kParserName, "arch");
 

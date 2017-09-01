@@ -4,8 +4,8 @@
 #include "parse_model.h"
 #include "state.h"
 #include "system.h"
-#include "twpipe/layer.h"
 #include "twpipe/corpus.h"
+#include "dynet_layer/layer.h"
 #include <vector>
 #include <unordered_map>
 #include <boost/program_options.hpp>

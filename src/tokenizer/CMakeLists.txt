@@ -14,4 +14,5 @@ add_library (twpipe_tokenizer
 target_link_libraries (twpipe_tokenizer
     ${LIBS}
     dynet
+    dynet_layer
     twpipe_utils)

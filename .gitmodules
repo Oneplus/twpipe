@@ -1,3 +1,6 @@
 [submodule "dynet"]
 	path = dynet
 	url = https://github.com/clab/dynet.git
+[submodule "dynet_layer"]
+	path = dynet_layer
+	url = https://github.com/Oneplus/dynet_layer.git

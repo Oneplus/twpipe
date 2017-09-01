@@ -1,21 +1,27 @@
 #include "arceager.h"
-#include "logging.h"
-#include "corpus.h"
+#include "twpipe/logging.h"
+#include "twpipe/corpus.h"
+#include "twpipe/alphabet_collection.h"
 
-ArcEager::ArcEager(const Alphabet& map) : TransitionSystem(map) {
-  n_actions = 3 + 2 * map.size();
+namespace twpipe {
 
+ArcEager::ArcEager() : TransitionSystem() {
+  Alphabet & map = AlphabetCollection::get()->deprel_map;
+  n_actions = 2 + 2 * map.size();
   action_names.push_back("SHIFT");  // 0
-  action_names.push_back("DROP");   // 1
-  action_names.push_back("REDUCE"); // 2
+  action_names.push_back("REDUCE"); // 1
   for (unsigned i = 0; i < map.size(); ++i) {
     action_names.push_back("LEFT-" + map.get(i));
     action_names.push_back("RIGHT-" + map.get(i));
   }
-  _INFO << "TransitionSystem:: show action names:";
+  _INFO << "[parse|arceager] show action names:";
   for (const auto& action_name : action_names) {
     _INFO << "- " << action_name;
   }
+}
+
+std::string ArcEager::name() const {
+  return "arceager";
 }
 
 std::string ArcEager::name(unsigned id) const {
@@ -29,29 +35,18 @@ bool ArcEager::allow_nonprojective() const {
 
 unsigned ArcEager::num_actions() const { return n_actions; }
 
-unsigned ArcEager::num_deprels() const { return deprel_map.size(); }
-
 bool ArcEager::is_shift(const unsigned& action) { return action == 0; }
-bool ArcEager::is_drop(const unsigned& action) { return action == 1; }
-bool ArcEager::is_reduce(const unsigned& action) { return action == 2; }
-bool ArcEager::is_left(const unsigned& action) { return (action > 2 && action % 2 == 1); }
-bool ArcEager::is_right(const unsigned& action) { return (action > 2 && action % 2 == 0); }
+bool ArcEager::is_reduce(const unsigned& action) { return action == 1; }
+bool ArcEager::is_left(const unsigned& action) { return (action > 1 && action % 2 == 0); }
+bool ArcEager::is_right(const unsigned& action) { return (action > 1 && action % 2 == 1); }
 
 unsigned ArcEager::get_shift_id() { return 0; }
-unsigned ArcEager::get_drop_id() { return 1; }
-unsigned ArcEager::get_reduce_id() { return 2; }
-unsigned ArcEager::get_left_id(const unsigned& deprel)  { return deprel * 2 + 3; }
-unsigned ArcEager::get_right_id(const unsigned& deprel) { return deprel * 2 + 4; }
+unsigned ArcEager::get_reduce_id() { return 1; }
+unsigned ArcEager::get_left_id(const unsigned& deprel) { return deprel * 2 + 2; }
+unsigned ArcEager::get_right_id(const unsigned& deprel) { return deprel * 2 + 3; }
 
 void ArcEager::shift_unsafe(State& state) const {
   state.stack.push_back(state.buffer.back());
-  state.buffer.pop_back();
-}
-
-void ArcEager::drop_unsafe(State& state) const {
-  unsigned b = state.buffer.back();
-  state.heads[b] = Corpus::REMOVED_HED;
-  state.deprels[b] = Corpus::REMOVED_DEL;
   state.buffer.pop_back();
 }
 
@@ -218,7 +213,7 @@ void ArcEager::get_valid_actions(const State& state, std::vector<unsigned>& vali
 
   if (b < root_id - 1 ||
     (b == root_id - 1 && n_empty_heads == 0) ||
-    (b == root_id && state.stack.size() == 1)) {
+      (b == root_id && state.stack.size() == 1)) {
     valid_actions.push_back(get_shift_id());
   }
 
@@ -229,16 +224,16 @@ void ArcEager::get_valid_actions(const State& state, std::vector<unsigned>& vali
     } else {
       // try LeftArc
       if (b < root_id) {
-        for (unsigned i = 0; i < deprel_map.size(); ++i) {
+        for (unsigned i = 0; i < num_deprels(); ++i) {
           unsigned act = get_left_id(i);
         }
       } else {
-      }     
+      }
     }
 
     // try RightArc
     if (b < root_id - 1 || (b == root_id - 1 && n_empty_heads == 1)) {
-      for (unsigned i = 0; i < deprel_map.size(); ++i) {
+      for (unsigned i = 0; i < num_deprels(); ++i) {
         unsigned act = get_right_id(i);
       }
     }
@@ -314,4 +309,6 @@ void ArcEager::get_oracle_actions_onestep(const std::vector<unsigned>& ref_heads
       sigma.pop_back();
     }
   }
+}
+
 }

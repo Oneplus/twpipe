@@ -71,8 +71,6 @@ endif()
 
 enable_testing()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dynet)
-
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
@@ -163,6 +161,12 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 #set(source_directory ${PROJECT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dynet)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dynet_layer)
 
 add_subdirectory(dynet/dynet)
+
+set(DYNET_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/dynet)
+add_subdirectory(dynet_layer/dynet_layer)
+
 add_subdirectory(src)

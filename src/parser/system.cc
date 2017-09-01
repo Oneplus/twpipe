@@ -1,4 +1,10 @@
 #include "system.h"
-#include "logging.h"
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
+#include "twpipe/alphabet_collection.h"
+
+namespace twpipe {
+
+unsigned TransitionSystem::num_deprels() {
+  return AlphabetCollection::get()->deprel_map.size();
+}
+
+}

@@ -4,7 +4,7 @@
 #include <regex>
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
-#include "twpipe/layer.h"
+#include "dynet_layer/layer.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "tokenize_model.h"

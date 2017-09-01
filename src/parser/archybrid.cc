@@ -36,8 +36,6 @@ bool ArcHybrid::allow_nonprojective() const {
 
 unsigned ArcHybrid::num_actions() const { return n_actions; }
 
-unsigned ArcHybrid::num_deprels() const { return AlphabetCollection::get()->deprel_map.size(); }
-
 void ArcHybrid::shift_unsafe(State& state) const {
   state.stack.push_back(state.buffer.back());
   state.buffer.pop_back();

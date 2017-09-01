@@ -38,8 +38,6 @@ bool ArcStandard::allow_nonprojective() const {
 
 unsigned ArcStandard::num_actions() const { return n_actions; }
 
-unsigned ArcStandard::num_deprels() const { return AlphabetCollection::get()->deprel_map.size(); }
-
 void ArcStandard::shift_unsafe(State& state) const {
   state.stack.push_back(state.buffer.back());
   state.buffer.pop_back();
