@@ -2,8 +2,8 @@
 #include "dynet/expr.h"
 #include "arcstd.h"
 #include "archybrid.h"
-// #include "arceager.h"
-// #include "swap.h"
+#include "arceager.h"
+#include "swap.h"
 #include "twpipe/corpus.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
@@ -12,16 +12,16 @@
 #include <random>
 
 namespace twpipe {
-/*
-void ParserBallesteros15::ArcEagerFunction::perform_action(const unsigned& action,
-                                                           dynet::ComputationGraph& cg,
-                                                           dynet::LSTMBuilder& a_lstm,
-                                                           dynet::LSTMBuilder& s_lstm,
-                                                           dynet::LSTMBuilder& q_lstm,
-                                                           Merge3Layer& composer,
-                                                           ParserBallesteros15::StateCheckpointImpl & cp,
-                                                           dynet::Expression& act_expr,
-                                                           dynet::Expression& rel_expr) {
+
+void Ballesteros15Model::ArcEagerFunction::perform_action(const unsigned& action,
+                                                          dynet::ComputationGraph& cg,
+                                                          ParseModel::LSTMBuilderType & a_lstm,
+                                                          ParseModel::LSTMBuilderType & s_lstm,
+                                                          ParseModel::LSTMBuilderType & q_lstm,
+                                                          Merge3Layer& composer,
+                                                          Ballesteros15Model::StateCheckpointImpl & cp,
+                                                          dynet::Expression& act_expr,
+                                                          dynet::Expression& rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
 
@@ -41,7 +41,7 @@ void ParserBallesteros15::ArcEagerFunction::perform_action(const unsigned& actio
     cp.buffer.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-    cp.buffer.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.buffer.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     q_lstm.add_input(cp.q_pointer, cp.buffer.back());
     cp.q_pointer = q_lstm.state();
   } else if (ArcEager::is_right(action)) {
@@ -51,7 +51,7 @@ void ParserBallesteros15::ArcEagerFunction::perform_action(const unsigned& actio
 
     cp.stack.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
     cp.stack.push_back(mod_expr);
@@ -64,7 +64,6 @@ void ParserBallesteros15::ArcEagerFunction::perform_action(const unsigned& actio
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
   }
 }
-*/
 
 void Ballesteros15Model::ArcStandardFunction::perform_action(const unsigned& action,
                                                              dynet::ComputationGraph& cg,
@@ -148,28 +147,27 @@ void Ballesteros15Model::ArcHybridFunction::perform_action(const unsigned& actio
   }
 }
 
-/*
-void ParserBallesteros15::SwapFunction::perform_action(const unsigned & action,
-                                                       dynet::ComputationGraph & cg,
-                                                       dynet::LSTMBuilder & a_lstm,
-                                                       dynet::LSTMBuilder & s_lstm,
-                                                       dynet::LSTMBuilder & q_lstm,
-                                                       Merge3Layer & composer,
-                                                       ParserBallesteros15::StateCheckpointImpl & cp,
-                                                       dynet::expr::Expression & act_expr,
-                                                       dynet::expr::Expression & rel_expr) {
+void Ballesteros15Model::SwapFunction::perform_action(const unsigned & action,
+                                                      dynet::ComputationGraph & cg,
+                                                      ParseModel::LSTMBuilderType & a_lstm,
+                                                      ParseModel::LSTMBuilderType & s_lstm,
+                                                      ParseModel::LSTMBuilderType & q_lstm,
+                                                      Merge3Layer & composer,
+                                                      Ballesteros15Model::StateCheckpointImpl & cp,
+                                                      dynet::Expression & act_expr,
+                                                      dynet::Expression & rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
   if (Swap::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else if (Swap::is_swap(action)) {
-    dynet::expr::Expression j_expr = cp.stack.back();
-    dynet::expr::Expression i_expr = cp.stack[cp.stack.size() - 2];
+    dynet::Expression j_expr = cp.stack.back();
+    dynet::Expression i_expr = cp.stack[cp.stack.size() - 2];
 
     cp.stack.pop_back();
     cp.stack.pop_back();
@@ -182,7 +180,7 @@ void ParserBallesteros15::SwapFunction::perform_action(const unsigned & action,
     q_lstm.add_input(cp.q_pointer, cp.buffer.back());
     cp.q_pointer = q_lstm.state();
   } else {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     if (Swap::is_left(action)) {
       hed_expr = cp.stack.back();
       mod_expr = cp.stack[cp.stack.size() - 2];
@@ -194,12 +192,12 @@ void ParserBallesteros15::SwapFunction::perform_action(const unsigned & action,
     cp.stack.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
   }
 }
-*/
+
 Ballesteros15Model::Ballesteros15Model(dynet::ParameterCollection & m,
                                        unsigned size_c,
                                        unsigned dim_c,

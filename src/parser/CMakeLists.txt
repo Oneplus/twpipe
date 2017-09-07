@@ -12,8 +12,8 @@ add_library(twpipe_parser
     arceager.h
     archybrid.cc
     archybrid.h
-    #swap.cc
-    #swap.h
+    swap.cc
+    swap.h
     system.h
     system.cc
     parse_model.cc
@@ -35,3 +35,10 @@ target_link_libraries (twpipe_parser
     dynet
     dynet_layer
     twpipe_utils)
+
+ADD_EXECUTABLE (generate_ensemble_data
+	generate_ensemble_data.cc
+	ensemble_generator.h
+	ensemble_generator.cc)
+
+TARGET_LINK_LIBRARIES (generate_ensemble_data twpipe_parser twpipe_utils)

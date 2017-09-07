@@ -4,6 +4,8 @@
 #include "parse_model_kiperwasser16.h"
 #include "archybrid.h"
 #include "arcstd.h"
+#include "arceager.h"
+#include "swap.h"
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/model.h"
@@ -34,11 +36,11 @@ ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
   if (system_name == "arcstd") {
     system = new ArcStandard();
   } else if (system_name == "arceager") {
-    // sys = new ArcEager(corpus.deprel_map);
+    system = new ArcEager();
   } else if (system_name == "archybrid") {
     system = new ArcHybrid();
   } else if (system_name == "swap") {
-    // sys = new Swap(corpus.deprel_map);
+    system = new Swap();
   } else {
     _ERROR << "[parse|model_builder] unknown transition system: " << system_name;
     exit(1);

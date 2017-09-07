@@ -28,7 +28,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     ("verbose,v", "Details logging.")
     ("help,h", "show help information.")
     ("train", "use to specify training.")
-    ("input-file", po::value<std::string>(), "input files")
+    ("input-file", po::value<std::string>(), "the path to the input file.")
     ;
 
   po::options_description running_opts("Running options");

@@ -1,9 +1,9 @@
 #include "parse_model_dyer15.h"
 #include "dynet/expr.h"
-// #include "arceager.h"
 #include "arcstd.h"
 #include "archybrid.h"
-// #include "swap.h"
+#include "arceager.h"
+#include "swap.h"
 #include "twpipe/corpus.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
@@ -12,7 +12,6 @@
 
 namespace twpipe {
 
-/*
 void Dyer15Model::ArcEagerFunction::perform_action(const unsigned& action,
                                                    dynet::ComputationGraph& cg,
                                                    LSTMBuilderType& a_lstm,
@@ -20,20 +19,20 @@ void Dyer15Model::ArcEagerFunction::perform_action(const unsigned& action,
                                                    LSTMBuilderType& q_lstm,
                                                    Merge3Layer& composer,
                                                    Dyer15Model::StateCheckpointImpl & cp,
-                                                   dynet::expr::Expression& act_expr,
-                                                   dynet::expr::Expression& rel_expr) {
+                                                   dynet::Expression& act_expr,
+                                                   dynet::Expression& rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
 
   if (ArcEager::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else if (ArcEager::is_left(action)) {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     hed_expr = cp.buffer.back();
     mod_expr = cp.stack.back();
 
@@ -41,17 +40,17 @@ void Dyer15Model::ArcEagerFunction::perform_action(const unsigned& action,
     cp.buffer.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
-    cp.buffer.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.buffer.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     q_lstm.add_input(cp.q_pointer, cp.buffer.back());
     cp.q_pointer = q_lstm.state();
   } else if (ArcEager::is_right(action)) {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     mod_expr = cp.buffer.back();
     hed_expr = cp.stack.back();
 
     cp.stack.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
     cp.stack.push_back(mod_expr);
@@ -64,7 +63,7 @@ void Dyer15Model::ArcEagerFunction::perform_action(const unsigned& action,
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
   }
 }
-*/
+
 void Dyer15Model::ArcStandardFunction::perform_action(const unsigned& action,
                                                       dynet::ComputationGraph& cg,
                                                       Dyer15Model::LSTMBuilderType& a_lstm,
@@ -148,7 +147,6 @@ void Dyer15Model::ArcHybridFunction::perform_action(const unsigned& action,
   }
 }
 
-/*
 void Dyer15Model::SwapFunction::perform_action(const unsigned & action,
                                                dynet::ComputationGraph & cg,
                                                LSTMBuilderType & a_lstm,
@@ -156,20 +154,20 @@ void Dyer15Model::SwapFunction::perform_action(const unsigned & action,
                                                LSTMBuilderType & q_lstm,
                                                Merge3Layer & composer,
                                                Dyer15Model::StateCheckpointImpl & cp,
-                                               dynet::expr::Expression & act_expr,
-                                               dynet::expr::Expression & rel_expr) {
+                                               dynet::Expression & act_expr,
+                                               dynet::Expression & rel_expr) {
   a_lstm.add_input(cp.a_pointer, act_expr);
   cp.a_pointer = a_lstm.state();
   if (Swap::is_shift(action)) {
-    const dynet::expr::Expression& buffer_front = cp.buffer.back();
+    const dynet::Expression& buffer_front = cp.buffer.back();
     cp.stack.push_back(buffer_front);
     s_lstm.add_input(cp.s_pointer, buffer_front);
     cp.s_pointer = s_lstm.state();
     cp.buffer.pop_back();
     cp.q_pointer = q_lstm.get_head(cp.q_pointer);
   } else if (Swap::is_swap(action)) {
-    dynet::expr::Expression j_expr = cp.stack.back();
-    dynet::expr::Expression i_expr = cp.stack[cp.stack.size() - 2];
+    dynet::Expression j_expr = cp.stack.back();
+    dynet::Expression i_expr = cp.stack[cp.stack.size() - 2];
 
     cp.stack.pop_back();
     cp.stack.pop_back();
@@ -182,7 +180,7 @@ void Dyer15Model::SwapFunction::perform_action(const unsigned & action,
     q_lstm.add_input(cp.q_pointer, cp.buffer.back());
     cp.q_pointer = q_lstm.state();
   } else {
-    dynet::expr::Expression mod_expr, hed_expr;
+    dynet::Expression mod_expr, hed_expr;
     if (Swap::is_left(action)) {
       hed_expr = cp.stack.back();
       mod_expr = cp.stack[cp.stack.size() - 2];
@@ -190,16 +188,14 @@ void Dyer15Model::SwapFunction::perform_action(const unsigned & action,
       hed_expr = cp.stack[cp.stack.size() - 2];
       mod_expr = cp.stack.back();
     }
-    cp.stack.pop_back();
-    cp.stack.pop_back();
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
     cp.s_pointer = s_lstm.get_head(cp.s_pointer);
-    cp.stack.push_back(dynet::expr::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
+    cp.stack.push_back(dynet::tanh(composer.get_output(hed_expr, mod_expr, rel_expr)));
     s_lstm.add_input(cp.s_pointer, cp.stack.back());
     cp.s_pointer = s_lstm.state();
   }
 }
-*/
+
 Dyer15Model::Dyer15Model(dynet::ParameterCollection & m,
                          unsigned size_w,
                          unsigned dim_w,
@@ -241,11 +237,11 @@ Dyer15Model::Dyer15Model(dynet::ParameterCollection & m,
   if (system_name == "arcstd") {
     sys_func = new ArcStandardFunction();
   } else if (system_name == "arceager") {
-    // sys_func = new ArcEagerFunction();
+    sys_func = new ArcEagerFunction();
   } else if (system_name == "archybrid") {
     sys_func = new ArcHybridFunction();
   } else if (system_name == "swap") {
-    // sys_func = new SwapFunction();
+    sys_func = new SwapFunction();
   } else {
     _ERROR << "Main:: Unknown transition system: " << system_name;
     exit(1);

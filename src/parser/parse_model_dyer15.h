@@ -37,7 +37,6 @@ struct Dyer15Model : public ParseModel {
                                 dynet::Expression & rel_expr) = 0;
   };
 
-  /*
   struct ArcEagerFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
@@ -50,7 +49,6 @@ struct Dyer15Model : public ParseModel {
                         dynet::Expression & rel_expr) override;
 
   };
-  */
 
   struct ArcStandardFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
@@ -76,7 +74,6 @@ struct Dyer15Model : public ParseModel {
                         dynet::Expression & rel_expr) override;
   };
 
-  /*
   struct SwapFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
@@ -88,7 +85,6 @@ struct Dyer15Model : public ParseModel {
                         dynet::Expression & act_expr,
                         dynet::Expression & rel_expr) override;
   };
-  */
 
   LSTMBuilderType s_lstm;
   LSTMBuilderType q_lstm;

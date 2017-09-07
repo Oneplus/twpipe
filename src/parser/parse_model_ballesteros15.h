@@ -36,18 +36,18 @@ struct Ballesteros15Model : public ParseModel {
                                 dynet::Expression& rel_expr) = 0;
   };
 
-  /*struct ArcEagerFunction : public TransitionSystemFunction {
+  struct ArcEagerFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
-                        dynet::LSTMBuilder& a_lstm,
-                        dynet::LSTMBuilder& s_lstm,
-                        dynet::LSTMBuilder& q_lstm,
+                        LSTMBuilderType & a_lstm,
+                        LSTMBuilderType & s_lstm,
+                        LSTMBuilderType & q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
                         dynet::Expression& act_expr,
                         dynet::Expression& rel_expr) override;
 
-  };*/
+  };
 
   struct ArcStandardFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
@@ -73,17 +73,17 @@ struct Ballesteros15Model : public ParseModel {
                         dynet::Expression& rel_expr) override;
   };
 
-  /*struct SwapFunction : public TransitionSystemFunction {
+  struct SwapFunction : public TransitionSystemFunction {
     void perform_action(const unsigned& action,
                         dynet::ComputationGraph& cg,
-                        dynet::LSTMBuilder& a_lstm,
-                        dynet::LSTMBuilder& s_lstm,
-                        dynet::LSTMBuilder& q_lstm,
+                        LSTMBuilderType & a_lstm,
+                        LSTMBuilderType & s_lstm,
+                        LSTMBuilderType & q_lstm,
                         Merge3Layer& composer,
                         StateCheckpointImpl & checkpoint,
                         dynet::Expression& act_expr,
                         dynet::Expression& rel_expr) override;
-  };*/
+  };
 
 
   LSTMBuilderType fwd_ch_lstm;

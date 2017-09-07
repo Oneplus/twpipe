@@ -1,13 +1,16 @@
 #include "swap.h"
-#include "logging.h"
-#include "corpus.h"
+#include "twpipe/logging.h"
+#include "twpipe/corpus.h"
+#include "twpipe/alphabet_collection.h"
 
-Swap::Swap(const Alphabet & map) : TransitionSystem(map) {
-  n_actions = 2 * map.size() + 3;
+namespace twpipe {
+
+Swap::Swap() : TransitionSystem() {
+  Alphabet & map = AlphabetCollection::get()->deprel_map;
+  n_actions = 2 * map.size() + 2;
 
   action_names.push_back("SHIFT");  // 0
-  action_names.push_back("DROP");   // 1
-  action_names.push_back("SWAP");   // 2
+  action_names.push_back("SWAP");   // 1
   for (unsigned i = 0; i < map.size(); ++i) {
     action_names.push_back("LEFT-" + map.get(i));
     action_names.push_back("RIGHT-" + map.get(i));
@@ -16,6 +19,10 @@ Swap::Swap(const Alphabet & map) : TransitionSystem(map) {
   for (const auto& action_name : action_names) {
     _INFO << "- " << action_name;
   }
+}
+
+std::string Swap::name() const {
+  return "swap";
 }
 
 std::string Swap::name(unsigned id) const {
@@ -28,8 +35,6 @@ bool Swap::allow_nonprojective() const {
 }
 
 unsigned Swap::num_actions() const { return n_actions; }
-
-unsigned Swap::num_deprels() const { return deprel_map.size(); }
 
 void Swap::get_transition_costs(const State & state,
                                 const std::vector<unsigned>& actions,
@@ -75,9 +80,8 @@ void Swap::get_oracle_actions(const std::vector<unsigned>& ref_heads,
   std::vector<unsigned> orders(N, Corpus::BAD_HED);
   get_oracle_actions_calculate_orders(root, tree, orders, timestamp);
 
-
-  // std::vector<unsigned> mpc(N, 0);
-  // get_oracle_actions_calculate_mpc(root, tree, mpc);
+  std::vector<unsigned> mpc(N, 0);
+  get_oracle_actions_calculate_mpc(root, tree, mpc);
 
   std::vector<unsigned> sigma;
   std::vector<unsigned> beta;
@@ -85,14 +89,10 @@ void Swap::get_oracle_actions(const std::vector<unsigned>& ref_heads,
   for (int i = N - 1; i >= 0; --i) { beta.push_back(i); }
 
   while (!(sigma.size() == 1 && beta.empty())) {
-    /*get_oracle_actions_onestep_improved(ref_heads, ref_deprels,
+    get_oracle_actions_onestep_improved(ref_heads, ref_deprels,
                                         tree, orders, mpc,
                                         sigma, beta, heads,
-                                        actions);*/
-    get_oracle_actions_onestep(ref_heads, ref_deprels,
-                               tree, orders,
-                               sigma, beta, heads,
-                               actions);
+                                        actions);
   }
 }
 
@@ -344,4 +344,6 @@ bool Swap::is_valid_action(const State& state, const unsigned& act) const {
   if (is_reduce && state.stack.size() < 3) { return false; }
   if (state.buffer.size() == 1 && !is_left(act)) { return false; }
   return true;
+}
+
 }
