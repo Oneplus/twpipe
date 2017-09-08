@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
       generator.generate(tokens, postags, actions, prob);
       
       nlohmann::json output;
-      output = { {"action", actions}, {"prob", prob} };
+      output = { {"id", sid}, {"action", actions}, {"prob", prob} };
       std::cout << output << std::endl;
       tokens.clear();
       postags.clear();

@@ -3,8 +3,59 @@
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/model.h"
+#include "twpipe/json.hpp"
+#include <iostream>
+#include <fstream>
 
 namespace twpipe {
+
+po::options_description ParserTrainer::get_options() {
+  po::options_description cmd("Parser parser learning options");
+  cmd.add_options()
+    ("parse-noisify-method", po::value<std::string>()->default_value("none"), "The type of noisifying method [none|singleton|word]")
+    ("parse-noisify-singleton-dropout-prob", po::value<float>()->default_value(0.2f), "The probability of dropping singleton, used in singleton mode.")
+    ;
+  return cmd;
+}
+
+ParserTrainer::ParserTrainer(ParseModel & engine,
+                             OptimizerBuilder & opt_builder,
+                             const po::variables_map & conf) :
+  Trainer(conf),
+  engine(engine),
+  opt_builder(opt_builder) {
+  noisify_method_name = conf["parse-noisify-method"].as<std::string>();
+  singleton_dropout_prob = conf["parse-noisify-singleton-dropout-prob"].as<float>();
+}
+
+float ParserTrainer::evaluate(Corpus & corpus) {
+  float n_recall = 0., n_total = 0.;
+  for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
+    const Instance & inst = corpus.devel_data.at(sid);
+
+    unsigned len = inst.input_units.size();
+    std::vector<std::string> words(len - 1), postags(len - 1);
+    std::vector<unsigned> pred_heads, gold_heads(len - 1);
+    std::vector<std::string> pred_deprels, gold_deprels(len - 1);
+    for (unsigned i = 1; i < inst.input_units.size(); ++i) {
+      words[i - 1] = inst.input_units[i].word;
+      postags[i - 1] = inst.input_units[i].postag;
+      gold_heads[i - 1] = inst.parse_units[i].head;
+      gold_deprels[i - 1] = AlphabetCollection::get()->deprel_map.get(
+        inst.parse_units[i].deprel);
+    }
+    engine.predict(words, postags, pred_heads, pred_deprels);
+    for (unsigned i = 0; i < pred_heads.size(); ++i) {
+      if (gold_heads[i] == pred_heads[i] &&
+          gold_deprels[i] == pred_deprels[i]) {
+        n_recall += 1.;
+      }
+      n_total += 1.;
+    }
+  }
+  float las = n_recall / n_total;
+  return las;
+}
 
 po::options_description SupervisedTrainer::get_options() {
   po::options_description cmd("Parser supervised learning options");
@@ -13,8 +64,6 @@ po::options_description SupervisedTrainer::get_options() {
     ("parse-supervised-objective", po::value<std::string>()->default_value("crossentropy"), "The learning objective [crossentropy|rank|bipartie_rank|structure]")
     ("parse-supervised-do-pretrain-iter", po::value<unsigned>()->default_value(1), "The number of pretrain iteration on dynamic oracle.")
     ("parse-supervised-do-explore-prob", po::value<float>()->default_value(0.9), "The probability of exploration.")
-    ("parse-noisify-method", po::value<std::string>()->default_value("none"), "The type of noisifying method [none|singleton|word]")
-    ("parse-noisify-singleton-dropout-prob", po::value<float>()->default_value(0.2f), "The probability of dropping singleton, used in singleton mode.")
     ;
   return cmd;
 }
@@ -22,9 +71,7 @@ po::options_description SupervisedTrainer::get_options() {
 SupervisedTrainer::SupervisedTrainer(ParseModel & engine,
                                      OptimizerBuilder & opt_builder,
                                      const po::variables_map& conf) :
-  Trainer(conf),
-  engine(engine),
-  opt_builder(opt_builder) {
+  ParserTrainer(engine, opt_builder, conf) {
 
   std::string supervised_oracle = conf["parse-supervised-oracle"].as<std::string>();
   if (supervised_oracle == "static") {
@@ -61,10 +108,6 @@ SupervisedTrainer::SupervisedTrainer(ParseModel & engine,
 
   beam_size = (conf.count("parse-beam-size") ? conf["parse-beam-size"].as<unsigned>() : 0);
   allow_nonprojective = (conf["parse-system"].as<std::string>() == "swap");
-  
-  /// save noisifier configuration.
-  noisify_method_name = conf["parse-noisify-method"].as<std::string>();
-  singleton_dropout_prob = conf["parse-noisify-singleton-dropout-prob"].as<float>();
 }
 
 void SupervisedTrainer::train(Corpus& corpus) {
@@ -82,7 +125,7 @@ void SupervisedTrainer::train(Corpus& corpus) {
   std::vector<unsigned> order;
   get_orders(corpus, order, allow_nonprojective);
 
-  bool use_beam_search = (beam_size > 1);
+  // bool use_beam_search = (beam_size > 1);
   _INFO << "[parse|train] will stop after " << max_iter << " iterations.";
   
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
@@ -106,30 +149,8 @@ void SupervisedTrainer::train(Corpus& corpus) {
       noisifier.denoisify(input_units);
     }
 
-    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh;
-    float n_recall = 0., n_total = 0.;
-    for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
-      const Instance & inst = corpus.devel_data.at(sid);
-
-      unsigned len = inst.input_units.size();
-      std::vector<std::string> words(len - 1), postags(len - 1);
-      std::vector<unsigned> pred_heads, gold_heads(len - 1);
-      std::vector<std::string> pred_deprels, gold_deprels(len - 1);
-      for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        words[i - 1] = inst.input_units[i].word;
-        postags[i - 1] = inst.input_units[i].postag;
-        gold_heads[i - 1] = inst.parse_units[i].head;
-        gold_deprels[i - 1] = AlphabetCollection::get()->deprel_map.get(
-          inst.parse_units[i].deprel);
-      }
-      engine.predict(words, postags, pred_heads, pred_deprels);
-      for (unsigned i = 0; i < pred_heads.size(); ++i) {
-        if (gold_heads[i] == pred_heads[i] &&
-            gold_deprels[i] == pred_deprels[i]) { n_recall += 1.; }
-        n_total += 1.;
-      }
-    }
-    float las = n_recall / n_total;
+    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh; 
+    float las = evaluate(corpus);
     if (las > best_las) {
       best_las = las;
       _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
@@ -386,6 +407,138 @@ void SupervisedTrainer::get_orders(Corpus& corpus,
       continue;
     }
     order.push_back(i);
+  }
+}
+
+EnsembleInstance::EnsembleInstance(std::vector<unsigned>& actions,
+                                   std::vector<std::vector<float>>& probs) :
+  actions(actions),
+  probs(probs) {
+}
+
+SupervisedEnsembleTrainer::SupervisedEnsembleTrainer(ParseModel & engine,
+                                                     OptimizerBuilder & opt_builder,
+                                                     const po::variables_map & conf) :
+  ParserTrainer(engine, opt_builder, conf) {
+}
+
+po::options_description SupervisedEnsembleTrainer::get_options() {
+  po::options_description cmd("Parser supervised ensemble learning options");
+  cmd.add_options()
+    ("parse-ensemble-data", po::value<std::string>(), "The path to the ensemble data.")
+    ;
+  return cmd;
+}
+
+void SupervisedEnsembleTrainer::train(Corpus & corpus,
+                                      EnsembleInstances & ensemble_instances) {
+  _INFO << "[parse|train] start lstm-parser supervised training.";
+  Noisifier noisifier(corpus, noisify_method_name, singleton_dropout_prob);
+
+  dynet::ParameterCollection & model = engine.model;
+  dynet::Trainer * trainer = opt_builder.build(model);
+  float eta0 = trainer->learning_rate;
+
+  std::vector<unsigned> order;
+  bool allow_nonprojective = engine.sys.allow_nonprojective();
+  for (auto & payload : ensemble_instances) {
+    unsigned id = payload.first;
+    if (ensemble_instances.count(id) == 0) { continue; }
+    order.push_back(id);
+  }
+
+  float llh = 0.f;
+  float llh_in_batch = 0.f;
+  float best_las = -1.f;
+
+  _INFO << "[parse|ensemble|train] will stop after " << max_iter << " iterations.";
+  for (unsigned iter = 1; iter <= max_iter; ++iter) {
+    llh = 0.f;
+    std::shuffle(order.begin(), order.end(), (*dynet::rndeng));
+
+    for (unsigned sid : order) {
+      InputUnits & units = corpus.training_data.at(sid).input_units;
+      const EnsembleInstance & inst = ensemble_instances.at(sid);
+
+      noisifier.noisify(units);
+      float lp = train_full_tree(units, inst, trainer);
+      llh += lp;
+      llh_in_batch += lp;
+      noisifier.denoisify(units);
+    }
+    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh;
+    float las = evaluate(corpus);
+    if (las > best_las) {
+      best_las = las;
+      _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+      Model::get()->to_json(Model::kParserName, engine.model);
+    }
+    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+  }
+}
+
+float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
+                                                 const EnsembleInstance & ensemble_instance,
+                                                 dynet::Trainer * trainer) {
+  TransitionSystem & sys = engine.sys;
+
+  dynet::ComputationGraph cg;
+  engine.new_graph(cg);
+
+  std::vector<dynet::Expression> loss;
+  unsigned len = input_units.size();
+  State state(len);
+
+  ParseModel::StateCheckpoint * checkpoint = engine.get_initial_checkpoint();
+  engine.initialize(cg, input_units, state, checkpoint);
+
+  const std::vector<unsigned> & actions = ensemble_instance.actions;
+  const std::vector<std::vector<float>> & probs = ensemble_instance.probs;
+
+  unsigned illegal_action = sys.num_actions();
+  unsigned n_actions = 0;
+  while (!state.terminated()) {
+    std::vector<unsigned> valid_actions;
+    sys.get_valid_actions(state, valid_actions);
+
+    dynet::Expression score_expr = engine.get_scores(checkpoint);
+    unsigned action = actions[n_actions];
+    const std::vector<float> & prob = probs[n_actions];
+    unsigned n_probs = prob.size();
+
+    loss.push_back(-dynet::dot_product(
+      dynet::input(*score_expr.pg, { n_probs }, prob),
+      dynet::log_softmax(score_expr)
+    ));
+    
+    sys.perform_action(state, action);
+    engine.perform_action(action, state, cg, checkpoint);
+    n_actions++;
+  }
+
+  engine.destropy_checkpoint(checkpoint);
+  float ret = 0.;
+  if (!loss.empty()) {
+    dynet::Expression l = dynet::sum(loss);
+    ret = dynet::as_scalar(cg.forward(l));
+    cg.backward(l);
+    trainer->update();
+  }
+  return ret;
+}
+
+void SupervisedEnsembleTrainer::load_ensemble_instances(const std::string & path,
+                                                        EnsembleInstances & instances) {
+  nlohmann::json payload;
+  std::ifstream ifs(path);
+  std::string buffer;
+  while (std::getline(ifs, buffer)) {
+    payload = nlohmann::json::parse(buffer.begin(), buffer.end());
+    unsigned id = payload.at("id").get<unsigned>();
+    std::vector<unsigned> actions = payload.at("action").get<std::vector<unsigned>>();
+    std::vector<std::vector<float>> probs = payload.at("prob").get<std::vector<std::vector<float>>>();
+
+    instances.insert(std::make_pair(id, EnsembleInstance(actions, probs)));
   }
 }
 

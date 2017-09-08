@@ -28,8 +28,8 @@ add_library(twpipe_parser
     parse_model_builder.h
     parser_trainer.cc
     parser_trainer.h
-    parser_ensemble_trainer.cc
-	parser_ensemble_trainer.h
+    # parser_ensemble_trainer.cc
+	# parser_ensemble_trainer.h
     )
 
 target_link_libraries (twpipe_parser

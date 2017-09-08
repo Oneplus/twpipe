@@ -46,7 +46,9 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
   po::options_description tokenizer_opts = twpipe::TokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
   po::options_description parser_opts = twpipe::ParseModel::get_options();
-  po::options_description parser_train_opts = twpipe::SupervisedTrainer::get_options();
+  po::options_description parser_train_opts = twpipe::ParserTrainer::get_options();
+  po::options_description parser_supervised_train_opts = twpipe::SupervisedTrainer::get_options();
+  po::options_description parser_ensemble_train_opts = twpipe::SupervisedEnsembleTrainer::get_options();
   po::options_description optimizer_opts = twpipe::OptimizerBuilder::get_options();
 
   po::positional_options_description input_opts;
@@ -63,6 +65,8 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     .add(tokenizer_opts)
     .add(postagger_opts)
     .add(parser_opts)
+    .add(parser_supervised_train_opts)
+    .add(parser_ensemble_train_opts)
     .add(parser_train_opts)
     .add(optimizer_opts)
     ;
@@ -143,10 +147,19 @@ int main(int argc, char* argv[]) {
       dynet::ParameterCollection model;
       twpipe::ParseModelBuilder builder(conf);
       builder.to_json();
-
+        
       twpipe::ParseModel * engine = builder.build(model);
-      twpipe::SupervisedTrainer trainer((*engine), opt_builder, conf);
-      trainer.train(corpus);
+      if (!conf["train-distill-parser"].as<bool>()) {
+        twpipe::SupervisedTrainer trainer((*engine), opt_builder, conf);
+        trainer.train(corpus);
+      } else {
+        twpipe::EnsembleInstances instances;
+        twpipe::SupervisedEnsembleTrainer::load_ensemble_instances(
+          conf["parse-ensemble-data"].as<std::string>(),
+          instances);
+        twpipe::SupervisedEnsembleTrainer trainer((*engine), opt_builder, conf);
+        trainer.train(corpus, instances);
+      }
     }
 
     std::string model_name = conf["model"].as<std::string>();

@@ -12,6 +12,7 @@ po::options_description Trainer::get_options() {
     ("train-tokenizer", po::value<bool>()->default_value(false), "use to specify training the tokenizer.")
     ("train-postagger", po::value<bool>()->default_value(false), "use to specify training the postagger.")
     ("train-parser", po::value<bool>()->default_value(false), "use to specify training the parser.")
+    ("train-distill-parser", po::value<bool>()->default_value(false), "train distilling parser.")
     ("max-iter", po::value<unsigned>()->default_value(100), "the maximum number of training.")
     ("early-stop", po::value<bool>()->default_value(false), "perform early stopping.")
     ;
