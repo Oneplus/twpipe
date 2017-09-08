@@ -249,14 +249,13 @@ Dyer15Model::Dyer15Model(dynet::ParameterCollection & m,
 }
 
 void Dyer15Model::perform_action(const unsigned& action,
+                                 const State& state,
                                  dynet::ComputationGraph& cg,
-                                 State& state,
                                  ParseModel::StateCheckpoint * checkpoint) {
   auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   dynet::Expression act_repr = act_emb.embed(action);
   dynet::Expression rel_repr = rel_emb.embed(action);
   sys_func->perform_action(action, cg, a_lstm, s_lstm, q_lstm, composer, *cp, act_repr, rel_repr);
-  sys.perform_action(state, action);
 }
 
 Dyer15Model::StateCheckpoint * Dyer15Model::get_initial_checkpoint() {
@@ -285,6 +284,21 @@ dynet::Expression Dyer15Model::get_scores(ParseModel::StateCheckpoint * checkpoi
     q_lstm.get_h(cp->q_pointer).back(),
     a_lstm.get_h(cp->a_pointer).back())
   ));
+}
+
+dynet::Expression Dyer15Model::l2() {
+  std::vector<dynet::Expression> ret;
+  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(e); }
+  for (auto & e : merge.get_params()) { ret.push_back(e); }
+  for (auto & e : composer.get_params()) { ret.push_back(e); }
+  for (auto & e : scorer.get_params()) { ret.push_back(e); }
+  ret.push_back(buffer_guard);
+  ret.push_back(stack_guard);
+  ret.push_back(action_start);
+  return dynet::sum(ret);
 }
 
 void Dyer15Model::new_graph(dynet::ComputationGraph& cg) {

@@ -19,4 +19,6 @@ add_library (twpipe_utils
     cluster.cc
     normalizer.h
     normalizer.cc
+	math.h
+	math.cc
     )

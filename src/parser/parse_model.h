@@ -52,8 +52,8 @@ struct ParseModel {
                                  StateCheckpoint * checkpoint) = 0;
 
   virtual void perform_action(const unsigned& action,
+                              const State& state,
                               dynet::ComputationGraph& cg,
-                              State& state,
                               StateCheckpoint * checkpoint) = 0;
 
   static std::pair<unsigned, float> get_best_action(const std::vector<float>& scores,
@@ -67,15 +67,17 @@ struct ParseModel {
 
   /// Get the un-softmaxed scores from the LSTM-parser.
   virtual dynet::Expression get_scores(StateCheckpoint * checkpoint) = 0;
- 
-  void raw_to_input_units(const std::vector<std::string> & words,
-                          const std::vector<std::string> & postags,
-                          InputUnits & units);
 
-  void parse_units_to_raw(const ParseUnits & units,
-                          std::vector<unsigned> & heads,
-                          std::vector<std::string> & deprels,
-                          bool add_pseduo_root=false);
+  virtual dynet::Expression l2() = 0;
+ 
+  static void raw_to_input_units(const std::vector<std::string> & words,
+                                 const std::vector<std::string> & postags,
+                                 InputUnits & units);
+
+  static void parse_units_to_raw(const ParseUnits & units,
+                                 std::vector<unsigned> & heads,
+                                 std::vector<std::string> & deprels,
+                                 bool add_pseduo_root=false);
 
   void predict(dynet::ComputationGraph& cg,
                const InputUnits& input,

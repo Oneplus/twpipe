@@ -209,7 +209,6 @@ void Swap::get_oracle_actions_onestep(const std::vector<unsigned>& ref_heads,
     }
   }
 
-  unsigned k = beta.empty() ? Corpus::BAD_HED : beta.back();
   if (orders[top0] < orders[top1]) {
     actions.push_back(get_swap_id());
     sigma.pop_back();

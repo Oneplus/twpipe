@@ -256,14 +256,13 @@ Ballesteros15Model::Ballesteros15Model(dynet::ParameterCollection & m,
 }
 
 void Ballesteros15Model::perform_action(const unsigned& action,
-                                         dynet::ComputationGraph& cg,
-                                         State& state,
-                                         ParseModel::StateCheckpoint * checkpoint) {
+                                        const State& state,
+                                        dynet::ComputationGraph& cg,
+                                        ParseModel::StateCheckpoint * checkpoint) {
   auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   dynet::Expression act_repr = act_emb.embed(action);
   dynet::Expression rel_repr = rel_emb.embed(action);
   sys_func->perform_action(action, cg, a_lstm, s_lstm, q_lstm, composer, *cp, act_repr, rel_repr);
-  sys.perform_action(state, action);
 }
 
 dynet::Expression Ballesteros15Model::get_scores(ParseModel::StateCheckpoint * checkpoint) {
@@ -273,6 +272,26 @@ dynet::Expression Ballesteros15Model::get_scores(ParseModel::StateCheckpoint * c
     q_lstm.get_h(cp->q_pointer).back(),
     a_lstm.get_h(cp->a_pointer).back())
   ));
+}
+
+dynet::Expression Ballesteros15Model::l2() {
+  std::vector<dynet::Expression> ret;
+  for (auto & layer : fwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : bwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(e); }
+  for (auto & e : merge.get_params()) { ret.push_back(e); }
+  for (auto & e : composer.get_params()) { ret.push_back(e); }
+  for (auto & e : scorer.get_params()) { ret.push_back(e); }
+  ret.push_back(buffer_guard);
+  ret.push_back(stack_guard);
+  ret.push_back(action_start);
+  ret.push_back(word_start_guard);
+  ret.push_back(word_end_guard);
+  ret.push_back(root_word);
+  return dynet::sum(ret);
 }
 
 ParseModel::StateCheckpoint * Ballesteros15Model::get_initial_checkpoint() {

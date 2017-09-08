@@ -166,16 +166,17 @@ void ParseModel::predict(dynet::ComputationGraph& cg,
     auto payload = get_best_action(scores, valid_actions);
     unsigned best_a = payload.first;
     actions.push_back(best_a);
-    perform_action(best_a, cg, state, checkpoint);
+    sys.perform_action(state, best_a);
+    perform_action(best_a, state, cg, checkpoint);
   }
   destropy_checkpoint(checkpoint);
   vector_to_parse(state.heads, state.deprels, parse);
 }
 
 void ParseModel::label(dynet::ComputationGraph & cg,
-                   const InputUnits & input,
-                   const ParseUnits & parse,
-                   ParseUnits & output) {
+                       const InputUnits & input,
+                       const ParseUnits & parse,
+                       ParseUnits & output) {
   new_graph(cg);
 
   unsigned len = input.size();
@@ -202,7 +203,8 @@ void ParseModel::label(dynet::ComputationGraph & cg,
       if (best_a == UINT_MAX || scores[best_a] < scores[i]) { best_a = i; }
     }
     assert(best_a != UINT_MAX);
-    perform_action(best_a, cg, state, checkpoint);
+    sys.perform_action(state, best_a);
+    perform_action(best_a, state, cg, checkpoint);
     step++;
   }
   destropy_checkpoint(checkpoint);
@@ -260,7 +262,8 @@ void ParseModel::beam_search(dynet::ComputationGraph & cg,
       State& state = states[cursor];
       State new_state(state);
       StateCheckpoint * new_checkpoint = copy_checkpoint(checkpoints[cursor]);
-      perform_action(action, cg, new_state, new_checkpoint);
+      sys.perform_action(new_state, action);
+      perform_action(action, new_state, cg, new_checkpoint);
 
       //      
       states.push_back(new_state);

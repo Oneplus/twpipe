@@ -246,7 +246,8 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
                       worst_gold_action,
                       best_non_gold_action,
                       loss);
-    engine.perform_action(action, cg, state, checkpoint);
+    sys.perform_action(state, action);
+    engine.perform_action(action, state, cg, checkpoint);
     n_actions++;
   }
   engine.destropy_checkpoint(checkpoint);
@@ -332,7 +333,8 @@ float SupervisedTrainer::train_structure_full_tree(const InputUnits & input_unit
       State new_state(state);
       ParseModel::StateCheckpoint * new_checkpoint = engine.copy_checkpoint(checkpoints[cursor]);
       if (action != sys.num_actions()) {
-        engine.perform_action(action, cg, new_state, new_checkpoint);
+        sys.perform_action(new_state, action);
+        engine.perform_action(action, new_state, cg, new_checkpoint);
       }
 
       //      

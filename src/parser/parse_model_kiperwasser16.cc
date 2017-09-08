@@ -167,11 +167,10 @@ void Kiperwasser16Model::initialize_parser(dynet::ComputationGraph & cg,
 }
 
 void Kiperwasser16Model::perform_action(const unsigned & action,
+                                        const State & state,
                                         dynet::ComputationGraph & cg,
-                                        State & state,
                                         ParseModel::StateCheckpoint * checkpoint) {
   auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
-  sys.perform_action(state, action);
   sys_func->extract_feature(encoded, empty, *cp, state);
 }
 
@@ -196,6 +195,19 @@ void Kiperwasser16Model::destropy_checkpoint(StateCheckpoint * checkpoint) {
 dynet::Expression Kiperwasser16Model::get_scores(ParseModel::StateCheckpoint * checkpoint) {
   auto * cp = dynamic_cast<StateCheckpointImpl *>(checkpoint);
   return scorer.get_output(dynet::tanh(merge.get_output(cp->f0, cp->f1, cp->f2, cp->f3)));
+}
+
+dynet::Expression Kiperwasser16Model::l2() {
+  std::vector<dynet::Expression> ret;
+  for (auto & layer : fwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & layer : bwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(e); }
+  for (auto & e : merge.get_params()) { ret.push_back(e); }
+  for (auto & e : scorer.get_params()) { ret.push_back(e); }
+  ret.push_back(empty);
+  ret.push_back(fwd_guard);
+  ret.push_back(bwd_guard);
+  return dynet::sum(ret);
 }
 
 }

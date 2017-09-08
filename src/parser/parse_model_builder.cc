@@ -14,22 +14,26 @@ namespace twpipe {
 
 
 ParseModelBuilder::ParseModelBuilder(po::variables_map & conf) {
-  system_name = conf["parse-system"].as<std::string>();
-  arch_name = conf["parse-arch"].as<std::string>();
+  system_name = (conf.count("parse-system") ?
+                 conf["parse-system"].as<std::string>() :
+                 std::string("archybrid"));
+  arch_name = (conf.count("parse-system") ?
+               conf["parse-arch"].as<std::string>() :
+               std::string("b15"));
 
   char_size = AlphabetCollection::get()->char_map.size();
   word_size = AlphabetCollection::get()->word_map.size();
   pos_size = AlphabetCollection::get()->pos_map.size();
   
-  char_dim = conf["parse-char-dim"].as<unsigned>();
-  word_dim = conf["parse-word-dim"].as<unsigned>();
-  pos_dim = conf["parse-pos-dim"].as<unsigned>();
-  action_dim = conf["parse-action-dim"].as<unsigned>();
-  label_dim = conf["parse-label-dim"].as<unsigned>();
-  n_layers = conf["parse-n-layer"].as<unsigned>();
-  lstm_input_dim = conf["parse-lstm-input-dim"].as<unsigned>();
-  hidden_dim = conf["parse-hidden-dim"].as<unsigned>();
-  embed_dim = conf["embedding-dim"].as<unsigned>();
+  char_dim = (conf.count("parse-char-dim") ? conf["parse-char-dim"].as<unsigned>() : 0);
+  word_dim = (conf.count("parse-word-dim") ? conf["parse-word-dim"].as<unsigned>() : 0);
+  pos_dim = (conf.count("parse-pos-dim") ? conf["parse-pos-dim"].as<unsigned>() : 0);
+  action_dim = (conf.count("parse-action-dim") ? conf["parse-action-dim"].as<unsigned>() : 0);
+  label_dim = (conf.count("parse-label-dim") ? conf["parse-label-dim"].as<unsigned>() : 0);
+  n_layers = (conf.count("parse-n-layer") ? conf["parse-n-layer"].as<unsigned>() : 0);
+  lstm_input_dim = (conf.count("parse-lstm-input-dim") ? conf["parse-lstm-input-dim"].as<unsigned>() : 0);
+  hidden_dim = (conf.count("parse-hidden-dim") ? conf["parse-hidden-dim"].as<unsigned>() : 0);
+  embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
 }
 
 ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
@@ -108,6 +112,7 @@ void ParseModelBuilder::to_json() {
     { "n-postags", boost::lexical_cast<std::string>(pos_size) },
     { "lstm-input-dim", boost::lexical_cast<std::string>(lstm_input_dim) },
     { "hidden-dim", boost::lexical_cast<std::string>(hidden_dim) },
+    { "n-layers", boost::lexical_cast<std::string>(n_layers) },
     { "emb-dim", boost::lexical_cast<std::string>(embed_dim) }
   });
 
@@ -123,6 +128,7 @@ void ParseModelBuilder::to_json() {
     Model::get()->to_json(Model::kParserName, {
       { "n-chars", boost::lexical_cast<std::string>(char_size) },
       { "char-dim", boost::lexical_cast<std::string>(char_dim) },
+      { "word-dim", boost::lexical_cast<std::string>(word_dim) },
       { "action-dim", boost::lexical_cast<std::string>(action_dim)},
       { "label-dim", boost::lexical_cast<std::string>(label_dim) }
     });
@@ -163,6 +169,8 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
     boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "lstm-input-dim"));
   hidden_dim =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "hidden-dim"));
+  n_layers =
+    boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "n-layers"));
   embed_dim =
     boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "emb-dim"));
 
@@ -193,6 +201,8 @@ ParseModel * ParseModelBuilder::from_json(dynet::ParameterCollection & model) {
     
     char_dim =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "char-dim"));
+    word_dim =
+      boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "word-dim"));
     action_dim =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kParserName, "action-dim"));
     label_dim =

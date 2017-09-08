@@ -152,8 +152,8 @@ struct Ballesteros15Model : public ParseModel {
                          StateCheckpoint * checkpoint) override;
 
   void perform_action(const unsigned& action,
+                      const State& state,
                       dynet::ComputationGraph& cg,
-                      State& state,
                       StateCheckpoint * checkpoint) override;
 
   StateCheckpoint * get_initial_checkpoint() override;
@@ -164,6 +164,8 @@ struct Ballesteros15Model : public ParseModel {
 
   /// Get the un-softmaxed scores from the LSTM-parser.
   dynet::Expression get_scores(StateCheckpoint * checkpoint) override;
+
+  dynet::Expression l2() override;
 };
 
 }
