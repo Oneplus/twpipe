@@ -432,7 +432,7 @@ po::options_description SupervisedEnsembleTrainer::get_options() {
 
 void SupervisedEnsembleTrainer::train(Corpus & corpus,
                                       EnsembleInstances & ensemble_instances) {
-  _INFO << "[parse|train] start lstm-parser supervised training.";
+  _INFO << "[parse|ensemble|train] start lstm-parser supervised training.";
   Noisifier noisifier(corpus, noisify_method_name, singleton_dropout_prob);
 
   dynet::ParameterCollection & model = engine.model;

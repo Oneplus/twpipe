@@ -244,11 +244,11 @@ Ballesteros15Model::Ballesteros15Model(dynet::ParameterCollection & m,
   if (system_name == "arcstd") {
     sys_func = new ArcStandardFunction();
   } else if (system_name == "arceager") {
-    // sys_func = new ArcEagerFunction();
+    sys_func = new ArcEagerFunction();
   } else if (system_name == "archybrid") {
     sys_func = new ArcHybridFunction();
   } else if (system_name == "swap") {
-    // sys_func = new SwapFunction();
+    sys_func = new SwapFunction();
   } else {
     _ERROR << "Main:: Unknown transition system: " << system_name;
     exit(1);

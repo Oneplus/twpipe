@@ -4,11 +4,10 @@
 
 namespace twpipe {
 
-/*
-void ParserKiperwasser16::ArcEagerFunction::extract_feature(std::vector<dynet::expr::Expression>& encoded,
-                                                            dynet::expr::Expression& empty,
-                                                            ParserKiperwasser16::StateCheckpointImpl & cp,
-                                                            const State& state) {
+void Kiperwasser16Model::ArcEagerFunction::extract_feature(std::vector<dynet::Expression>& encoded,
+                                                           dynet::Expression& empty,
+                                                           Kiperwasser16Model::StateCheckpointImpl & cp,
+                                                           const State& state) {
   // S1, S0, B0, B1
   // should do after sys.perform_action
   unsigned stack_size = state.stack.size();
@@ -19,7 +18,6 @@ void ParserKiperwasser16::ArcEagerFunction::extract_feature(std::vector<dynet::e
   if (buffer_size > 1) { cp.f2 = encoded[state.buffer[buffer_size - 1]]; } else { cp.f2 = empty; }
   if (buffer_size > 2) { cp.f3 = encoded[state.buffer[buffer_size - 2]]; } else { cp.f3 = empty; }
 }
-*/
 
 void Kiperwasser16Model::ArcStandardFunction::extract_feature(std::vector<dynet::Expression> & encoded,
                                                               dynet::Expression & empty,
@@ -47,11 +45,11 @@ void Kiperwasser16Model::ArcHybridFunction::extract_feature(std::vector<dynet::E
   unsigned buffer_size = state.buffer.size();
   if (buffer_size > 1) { cp.f3 = encoded[state.buffer[buffer_size - 1]]; } else { cp.f3 = empty; }
 }
-/*
-void ParserKiperwasser16::SwapFunction::extract_feature(std::vector<dynet::expr::Expression>& encoded,
-                                                        dynet::expr::Expression& empty,
-                                                        ParserKiperwasser16::StateCheckpointImpl & cp,
-                                                        const State& state) {
+
+void Kiperwasser16Model::SwapFunction::extract_feature(std::vector<dynet::Expression>& encoded,
+                                                       dynet::Expression& empty,
+                                                       Kiperwasser16Model::StateCheckpointImpl & cp,
+                                                       const State& state) {
   unsigned stack_size = state.stack.size();
   if (stack_size > 3) { cp.f0 = encoded[state.stack[stack_size - 3]]; } else { cp.f0 = empty; }
   if (stack_size > 2) { cp.f1 = encoded[state.stack[stack_size - 2]]; } else { cp.f1 = empty; }
@@ -60,7 +58,6 @@ void ParserKiperwasser16::SwapFunction::extract_feature(std::vector<dynet::expr:
   unsigned buffer_size = state.buffer.size();
   if (buffer_size > 1) { cp.f3 = encoded[state.buffer[buffer_size - 1]]; } else { cp.f3 = empty; }
 }
-*/
 
 Kiperwasser16Model::Kiperwasser16Model(dynet::ParameterCollection & m,
                                        unsigned size_w,

@@ -28,14 +28,12 @@ struct Kiperwasser16Model : public ParseModel {
                                  const State & state) = 0;
   };
 
-  /*
   struct ArcEagerFunction : public TransitionSystemFunction {
     void extract_feature(std::vector<dynet::Expression>& encoded,
                          dynet::Expression& empty,
                          StateCheckpointImpl & checkpoint,
                          const State& state) override;
   };
-  */
 
   struct ArcStandardFunction : public TransitionSystemFunction {
     void extract_feature(std::vector<dynet::Expression>& encoded,
@@ -51,14 +49,12 @@ struct Kiperwasser16Model : public ParseModel {
                          const State & state) override;
   };
 
-  /*
   struct SwapFunction : public TransitionSystemFunction {
-    void extract_feature(std::vector<dynet::expr::Expression>& encoded,
-                         dynet::expr::Expression& empty,
+    void extract_feature(std::vector<dynet::Expression>& encoded,
+                         dynet::Expression& empty,
                          StateCheckpointImpl & checkpoint,
                          const State& state) override;
   };
-  */
 
   LSTMBuilderType fwd_lstm;
   LSTMBuilderType bwd_lstm;
