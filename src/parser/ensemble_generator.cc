@@ -1,6 +1,7 @@
 #include "ensemble_generator.h"
 #include "twpipe/logging.h"
 #include "twpipe/math.h"
+#include "twpipe/alphabet_collection.h"
 
 namespace twpipe {
 
@@ -9,7 +10,8 @@ po::options_description EnsembleDataGenerator::get_options() {
   cmd.add_options()
     ("ensemble-method", po::value<std::string>()->default_value("prob"), "ensemble methods [prob|logits_mean|logits_sum]")
     ("ensemble-n-samples", po::value<unsigned>()->default_value(1), "the number of samples.")
-    ("ensemble-rollin", po::value<std::string>()->default_value("boltzmann"), "the rollin-method [egreedy|boltzmann]")
+    ("ensemble-rollin", po::value<std::string>()->default_value("boltzmann"), "the rollin-method [expert|egreedy|boltzmann]")
+    ("ensemble-expert-proportion", po::value<float>()->default_value(0.f), "the proportion of expert policy ")
     ("ensemble-egreedy-epsilon", po::value<float>()->default_value(0.1f), "the epsilon of epsilon-greedy policy.")
     ("ensemble-boltzmann-temperature", po::value<float>()->default_value(1.f), "the temperature of epsilon-greedy policy.")
     ;
@@ -38,7 +40,18 @@ EnsembleDataGenerator::EnsembleDataGenerator(std::vector<ParseModel*>& engines,
   _INFO << "[twpipe|parser|ensemble_generator] generate " << n_samples << " for each instance.";
 
   std::string rollin_name = conf["ensemble-rollin"].as<std::string>();
-  if (rollin_name == "egreedy") {
+  if (rollin_name == "expert") {
+    rollin_policy = kExpert;
+    proportion = conf["ensemble-expert-proportion"].as<float>();
+    if (proportion > 1.) {
+      proportion = 1.;
+      _INFO << "[twpipe|parser|ensemble_generator] proportion should be less than 1, reset.";
+    } else if (proportion < 0.) {
+      _INFO << "[twpipe|parser|ensemble_generator] proportion should be greater than 0., reset.";
+    }
+    _INFO << "[twpipe|parser|ensemble_generator] roll-in policy: " << rollin_name;
+    _INFO << "[twpipe|parser|ensemble_generator] expert proportion: " << proportion;
+  } else if (rollin_name == "egreedy") {
     rollin_policy = kEpsilonGreedy;
     epsilon = conf["ensemble-egreedy-epsilon"].as<float>();
     _INFO << "[twpipe|parser|ensemble_generator] roll-in policy: " << rollin_name;
@@ -55,7 +68,9 @@ EnsembleDataGenerator::EnsembleDataGenerator(std::vector<ParseModel*>& engines,
 }
 
 void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
-                                     const std::vector<std::string>& postags, 
+                                     const std::vector<std::string>& postags,
+                                     const std::vector<unsigned> & heads,
+                                     const std::vector<std::string> & deprels,
                                      std::vector<unsigned>& actions,
                                      std::vector<std::vector<float>>& prob) {
   unsigned n_engines = engines.size();
@@ -77,6 +92,17 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
   actions.clear();
   prob.clear();
   TransitionSystem & system = engines[0]->sys;
+
+  std::vector<unsigned> gold_actions;
+  if (rollin_policy == kExpert) {
+    std::vector<unsigned> numeric_deprels(deprels.size());
+    for (unsigned i = 0; i < deprels.size(); ++i) {
+      numeric_deprels[i] = AlphabetCollection::get()->deprel_map.get(deprels[i]);
+    }
+    system.get_oracle_actions(heads, numeric_deprels, gold_actions);
+  }
+
+  unsigned n_actions = 0;
   while (!state.terminated()) {
     std::vector<unsigned> valid_actions;
     system.get_valid_actions(state, valid_actions);
@@ -101,7 +127,13 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
     }
 
     unsigned action = UINT_MAX;
-    if (rollin_policy == kEpsilonGreedy) {
+    if (rollin_policy == kExpert) {
+      action = gold_actions[n_actions];
+      for (unsigned i = 0; i < ensemble_probs.size(); ++i) {
+        ensemble_probs[i] *= (1 - proportion);
+        if (i == action) { ensemble_probs[i] += proportion; }
+      }
+    } else if (rollin_policy == kEpsilonGreedy) {
       float seed = dynet::rand01();
       if (seed < epsilon) {
         action = valid_actions[dynet::rand0n(valid_actions.size())];
@@ -127,6 +159,8 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
     for (unsigned i = 0; i < n_engines; ++i) {
       engines[i]->perform_action(action, state, cg, checkpoints[i]);
     }
+
+    n_actions++;
   }
 
   for (unsigned i = 0; i < n_engines; ++i) { delete checkpoints[i]; }

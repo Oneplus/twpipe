@@ -91,6 +91,11 @@ int main(int argc, char* argv[]) {
   std::string buffer;
   std::vector<std::string> tokens;
   std::vector<std::string> postags;
+  std::vector<unsigned> heads;
+  std::vector<std::string> deprels;
+  heads.push_back(twpipe::Corpus::BAD_HED);
+  deprels.push_back(twpipe::Corpus::BAD0);
+  
   std::vector<unsigned> actions;
   std::vector<std::vector<float>> prob;
   std::ifstream ifs(conf["input-file"].as<std::string>());
@@ -99,13 +104,17 @@ int main(int argc, char* argv[]) {
   while (std::getline(ifs, buffer)) {
     boost::algorithm::trim(buffer);
     if (buffer.empty()) {
-      generator.generate(tokens, postags, actions, prob);
+      generator.generate(tokens, postags, heads, deprels, actions, prob);
       
       nlohmann::json output;
       output = { {"id", sid}, {"action", actions}, {"prob", prob} };
       std::cout << output << std::endl;
       tokens.clear();
       postags.clear();
+      heads.clear();
+      deprels.clear();
+      heads.push_back(twpipe::Corpus::BAD_HED);
+      deprels.push_back(twpipe::Corpus::BAD0);
       sid++;
     } else if (buffer[0] == '#') {
       continue;
@@ -114,6 +123,13 @@ int main(int argc, char* argv[]) {
       boost::algorithm::split(data, buffer, boost::is_any_of("\t "));
       tokens.push_back(data[1]);
       postags.push_back(data[3]);
+      if (data[6] == "_") {
+        heads.push_back(twpipe::Corpus::BAD_HED);
+        deprels.push_back(twpipe::Corpus::BAD0);
+      } else {
+        heads.push_back(boost::lexical_cast<unsigned>(data[6]));
+        deprels.push_back(data[7]);
+      }
     }
   }
   return 0;

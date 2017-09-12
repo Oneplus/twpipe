@@ -11,13 +11,14 @@ namespace twpipe {
 
 struct EnsembleDataGenerator {
   enum ENSEMBLE_METHOD_TYPE { kProbability, kLogitsMean, kLogitsSum };
-  enum ROLLIN_POLICY_TYPE { kEpsilonGreedy, kBoltzmann };
+  enum ROLLIN_POLICY_TYPE { kExpert, kEpsilonGreedy, kBoltzmann };
 
   ENSEMBLE_METHOD_TYPE ensemble_method;
   ROLLIN_POLICY_TYPE rollin_policy;
   unsigned n_samples;
   float epsilon;
   float temperature;
+  float proportion;
   
   std::vector<ParseModel *>& engines;
 
@@ -28,8 +29,11 @@ struct EnsembleDataGenerator {
 
   void generate(const std::vector<std::string> & words,
                 const std::vector<std::string> & postags,
+                const std::vector<unsigned> & heads,
+                const std::vector<std::string> & deprels,
                 std::vector<unsigned> & actions,
                 std::vector<std::vector<float>> & prob);
+
 };
 
 }
