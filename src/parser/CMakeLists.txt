@@ -28,8 +28,6 @@ add_library(twpipe_parser
     parse_model_builder.h
     parser_trainer.cc
     parser_trainer.h
-    # parser_ensemble_trainer.cc
-	# parser_ensemble_trainer.h
     )
 
 target_link_libraries (twpipe_parser
@@ -43,4 +41,4 @@ ADD_EXECUTABLE (generate_ensemble_data
 	ensemble_generator.h
 	ensemble_generator.cc)
 
-TARGET_LINK_LIBRARIES (generate_ensemble_data twpipe_parser twpipe_utils)
+TARGET_LINK_LIBRARIES (generate_ensemble_data ${LIBS} twpipe_parser twpipe_utils)

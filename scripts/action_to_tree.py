@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import sys
 import argparse
 import json
 
@@ -33,9 +34,9 @@ class ArcStandard(Parser):
         if action == 0:
             self._shift(state)
         elif action % 2 == 1:
-            self._left(state, self.deprel_map_[(action - 1) % 2])
-        elif action % 2 == 0:
-            self._right(state, self.deprel_map_[action % 2])
+            self._left(state, self.deprel_map_[(action - 1) / 2])
+        else:
+            self._right(state, self.deprel_map_[(action - 2) / 2])
 
     @classmethod
     def _shift(cls, state):
@@ -48,6 +49,8 @@ class ArcStandard(Parser):
     def _left(cls, state, deprel):
         assert len(state.stack_) >= 2
         hed, mod = state.stack_[-1], state.stack_[-2]
+        state.stack_ = state.stack_[:-1]
+        state.stack_[-1] = hed
         state.heads_[mod] = hed
         state.deprels_[mod] = deprel
 
@@ -55,6 +58,8 @@ class ArcStandard(Parser):
     def _right(cls, state, deprel):
         assert len(state.stack_) >= 2
         hed, mod = state.stack_[-2], state.stack_[-1]
+        state.stack_ = state.stack_[:-1]
+        state.stack_[-1] = hed
         state.heads_[mod] = hed
         state.deprels_[mod] = deprel
 
@@ -67,9 +72,9 @@ class ArcHybrid(Parser):
         if action == 0:
             self._shift(state)
         elif action % 2 == 1:
-            self._left(state, self.deprel_map_[(action - 1) % 2])
-        elif action % 2 == 0:
-            self._right(state, self.deprel_map_[action % 2])
+            self._left(state, self.deprel_map_[(action - 1) / 2])
+        else:
+            self._right(state, self.deprel_map_[(action - 2) / 2])
 
     @classmethod
     def _shift(cls, state):
@@ -81,14 +86,16 @@ class ArcHybrid(Parser):
     @classmethod
     def _left(cls, state, deprel):
         assert len(state.stack_) >= 1 and len(state.buffer_) >= 1
-        hed, mod = state.buffer_[-1], state.buffer_[-2]
+        hed, mod = state.buffer_[0], state.stack_[-1]
+        state.stack_ = state.stack_[:-1]
         state.heads_[mod] = hed
         state.deprels_[mod] = deprel
 
     @classmethod
     def _right(cls, state, deprel):
         assert len(state.stack_) >= 2
-        hed, mod = state.buffer_[-2], state.buffer_[-1]
+        hed, mod = state.stack_[-2], state.stack_[-1]
+        state.stack_ = state.stack_[:-1]
         state.heads_[mod] = hed
         state.deprels_[mod] = deprel
 
@@ -105,7 +112,7 @@ def main():
     deprel_map = model['general']['deprel-map']
     for name in deprel_map:
         i = deprel_map[name]
-        mapping[i] = name
+        mapping[int(i)] = name.encode('utf-8')
 
     system = model['parser']['config']['system']
     assert system in ('archybrid', 'arcstd')
@@ -127,11 +134,11 @@ def main():
         i = fields['id']
         actions = fields['action']
         lines = dataset[i].splitlines()
-        body = [line for line in lines if line.startswith('#')]
+        body = [line for line in lines if not line.startswith('#')]
         n = len(body)
         state = State(n + 1)
         for action in actions:
-            assert state.terminate()
+            assert not state.terminate()
             parser.perform(state, action)
         for i, line in enumerate(body):
             fields = line.split()

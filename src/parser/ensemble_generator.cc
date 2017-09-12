@@ -1,6 +1,7 @@
 #include "ensemble_generator.h"
 #include "twpipe/logging.h"
 #include "twpipe/math.h"
+#include "twpipe/corpus.h"
 #include "twpipe/alphabet_collection.h"
 
 namespace twpipe {
@@ -96,7 +97,8 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
   std::vector<unsigned> gold_actions;
   if (rollin_policy == kExpert) {
     std::vector<unsigned> numeric_deprels(deprels.size());
-    for (unsigned i = 0; i < deprels.size(); ++i) {
+    numeric_deprels[0] = Corpus::BAD_DEL;
+    for (unsigned i = 1; i < deprels.size(); ++i) {
       numeric_deprels[i] = AlphabetCollection::get()->deprel_map.get(deprels[i]);
     }
     system.get_oracle_actions(heads, numeric_deprels, gold_actions);

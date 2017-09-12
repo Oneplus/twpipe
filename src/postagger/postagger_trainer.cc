@@ -10,8 +10,8 @@ PostaggerTrainer::PostaggerTrainer(PostagModel & engine,
                                    OptimizerBuilder & opt_builder,
                                    po::variables_map & conf) :
   Trainer(conf),
-  opt_builder(opt_builder),
-  engine(engine) {
+  engine(engine),
+  opt_builder(opt_builder) {
   dim = WordEmbedding::get()->dim();
 }
 
