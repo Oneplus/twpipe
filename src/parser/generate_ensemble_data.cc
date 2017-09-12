@@ -6,6 +6,7 @@
 #include "twpipe/trainer.h"
 #include "twpipe/model.h"
 #include "twpipe/alphabet_collection.h"
+#include "twpipe/corpus.h"
 #include "twpipe/json.hpp"
 #include "parser/parse_model_builder.h"
 #include "parser/ensemble_generator.h"
@@ -105,16 +106,20 @@ int main(int argc, char* argv[]) {
     boost::algorithm::trim(buffer);
     if (buffer.empty()) {
       generator.generate(tokens, postags, heads, deprels, actions, prob);
-      
-      nlohmann::json output;
-      output = { {"id", sid}, {"action", actions}, {"prob", prob} };
-      std::cout << output << std::endl;
+
+      if (!action.empty()) {
+        nlohmann::json output;
+        output = {{"id",     sid},
+                  {"action", actions},
+                  {"prob",   prob}};
+        std::cout << output << std::endl;
+      }
       tokens.clear();
       postags.clear();
       heads.clear();
       deprels.clear();
       heads.push_back(twpipe::Corpus::BAD_HED);
-      deprels.push_back(twpipe::Corpus::BAD0);
+      deprels.emplace_back(twpipe::Corpus::BAD0);
       sid++;
     } else if (buffer[0] == '#') {
       continue;
@@ -125,7 +130,7 @@ int main(int argc, char* argv[]) {
       postags.push_back(data[3]);
       if (data[6] == "_") {
         heads.push_back(twpipe::Corpus::BAD_HED);
-        deprels.push_back(twpipe::Corpus::BAD0);
+        deprels.emplace_back(twpipe::Corpus::BAD0);
       } else {
         heads.push_back(boost::lexical_cast<unsigned>(data[6]));
         deprels.push_back(data[7]);

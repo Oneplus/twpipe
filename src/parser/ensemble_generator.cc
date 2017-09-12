@@ -1,4 +1,5 @@
 #include "ensemble_generator.h"
+#include "tree.h"
 #include "twpipe/logging.h"
 #include "twpipe/math.h"
 #include "twpipe/corpus.h"
@@ -96,6 +97,11 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
 
   std::vector<unsigned> gold_actions;
   if (rollin_policy == kExpert) {
+    if (!DependencyUtils::is_tree(heads) ||
+      (!system.allow_nonprojective() && DependencyUtils::is_non_projective(heads))) {
+      for (unsigned i = 0; i < n_engines; ++i) { delete checkpoints[i]; }
+      return;
+    }
     std::vector<unsigned> numeric_deprels(deprels.size());
     numeric_deprels[0] = Corpus::BAD_DEL;
     for (unsigned i = 1; i < deprels.size(); ++i) {
@@ -122,7 +128,7 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
     }
 
     if (ensemble_method == kProbability || ensemble_method == kLogitsMean) {
-      for (auto & prob : ensemble_probs) { prob /= n_engines; }
+      for (auto & p : ensemble_probs) { p /= n_engines; }
     }
     if (ensemble_method == kLogitsMean || ensemble_method == kLogitsSum) {
       Math::softmax_inplace(ensemble_probs);
