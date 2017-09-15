@@ -66,13 +66,13 @@ void ParseModel::predict(const std::vector<std::string>& words,
                          std::vector<unsigned>& heads,
                          std::vector<std::string>& deprels) {
   InputUnits input;
-  raw_to_input_units(words, postags, input);
+  Corpus::vector_to_input_units(words, postags, input);
 
   ParseUnits result;
   dynet::ComputationGraph cg;
   predict(cg, input, result);
 
-  parse_units_to_raw(result, heads, deprels);
+  Corpus::parse_units_to_vector(result, heads, deprels);
 }
 
 void ParseModel::label(const std::vector<std::string> & words,
@@ -80,68 +80,6 @@ void ParseModel::label(const std::vector<std::string> & words,
                        const std::vector<unsigned> & heads,
                        std::vector<std::string> & deprels) {
   BOOST_ASSERT_MSG(false, "not implemented.");
-}
-
-void ParseModel::raw_to_input_units(const std::vector<std::string>& words,
-                                    const std::vector<std::string>& postags,
-                                    InputUnits & units) {
-  // The first element is the pseudo root.
-  units.clear();
-
-  Alphabet & word_map = AlphabetCollection::get()->word_map;
-  Alphabet & char_map = AlphabetCollection::get()->char_map;
-  Alphabet & pos_map = AlphabetCollection::get()->pos_map;
-
-  InputUnit unit;
-  unit.wid = word_map.get(Corpus::ROOT);
-  unit.pid = pos_map.get(Corpus::ROOT);
-  unit.aux_wid = unit.wid;
-  unit.word = Corpus::ROOT;
-  unit.postag = Corpus::ROOT;
-  unit.lemma = Corpus::ROOT;
-  unit.feature = Corpus::ROOT;
-  units.push_back(unit);
-
-  for (unsigned i = 0; i < words.size(); ++i) {
-    const std::string & word = words[i];
-    const std::string & postag = postags[i];
-
-    unit.wid = (word_map.contains(word) ? word_map.get(word) : word_map.get(Corpus::UNK));
-    unit.pid = pos_map.get(postag);
-    unit.aux_wid = unit.wid;
-    unit.word = word;
-    unit.postag = postag;
-
-    unsigned cur = 0;
-    unit.cids.clear();
-    while (cur < word.size()) {
-      unsigned len = utf8_len(word[cur]);
-      std::string ch_str = word.substr(cur, len);
-      unit.cids.push_back(
-        char_map.contains(ch_str) ? char_map.get(ch_str) : char_map.get(Corpus::UNK)
-      );
-      cur += len;
-    }
-    units.push_back(unit);
-  }
-}
-
-void ParseModel::parse_units_to_raw(const ParseUnits & units,
-                                    std::vector<unsigned>& heads,
-                                    std::vector<std::string>& deprels,
-                                    bool add_pseudo_root) {
-  heads.clear();
-  deprels.clear();
-
-  if (add_pseudo_root) {
-    heads.push_back(Corpus::BAD_HED);
-    deprels.push_back(Corpus::ROOT);
-  }
-  // The first element in units is pseduo root.
-  for (unsigned i = 1; i < units.size(); ++i) {
-    heads.push_back(units[i].head);
-    deprels.push_back(AlphabetCollection::get()->deprel_map.get(units[i].deprel));
-  }
 }
 
 void ParseModel::predict(dynet::ComputationGraph& cg,
@@ -170,7 +108,7 @@ void ParseModel::predict(dynet::ComputationGraph& cg,
     perform_action(best_a, state, cg, checkpoint);
   }
   destropy_checkpoint(checkpoint);
-  vector_to_parse(state.heads, state.deprels, parse);
+  Corpus::vector_to_parse_units(state.heads, state.deprels, parse);
 }
 
 void ParseModel::label(dynet::ComputationGraph & cg,
@@ -185,7 +123,7 @@ void ParseModel::label(dynet::ComputationGraph & cg,
   initialize(cg, input, state, checkpoint);
 
   std::vector<unsigned> ref_heads, ref_deprels;
-  parse_to_vector(parse, ref_heads, ref_deprels);
+  Corpus::parse_units_to_vector(parse, ref_heads, ref_deprels);
   std::vector<unsigned> ref_actions;
   sys.get_oracle_actions(ref_heads, ref_deprels, ref_actions);
   unsigned step = 0;
@@ -208,7 +146,7 @@ void ParseModel::label(dynet::ComputationGraph & cg,
     step++;
   }
   destropy_checkpoint(checkpoint);
-  vector_to_parse(state.heads, state.deprels, output);
+  Corpus::vector_to_parse_units(state.heads, state.deprels, output);
 }
 
 void ParseModel::beam_search(dynet::ComputationGraph & cg,
@@ -277,7 +215,7 @@ void ParseModel::beam_search(dynet::ComputationGraph & cg,
   }
   parses.resize(next - curr);
   for (unsigned i = curr; i < next; ++i) {
-    vector_to_parse(states[i].heads, states[i].deprels, parses[i - curr]);
+    Corpus::vector_to_parse_units(states[i].heads, states[i].deprels, parses[i - curr]);
   }
 }
 

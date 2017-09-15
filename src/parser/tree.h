@@ -70,28 +70,28 @@ struct DependencyUtils {
   static bool is_non_projective(const ParseUnits& parse_units) {
     std::vector<unsigned> heads;
     std::vector<unsigned> deprels;
-    parse_to_vector(parse_units, heads, deprels);
+    Corpus::parse_units_to_vector(parse_units, heads, deprels);
     return is_non_projective(heads);
   }
 
   static bool is_projective(const ParseUnits& parse_units) {
     std::vector<unsigned> heads;
     std::vector<unsigned> deprels;
-    parse_to_vector(parse_units, heads, deprels);
+    Corpus::parse_units_to_vector(parse_units, heads, deprels);
     return is_projective(heads);
   }
 
   static bool is_tree(const ParseUnits& parse_units) {
     std::vector<unsigned> heads;
     std::vector<unsigned> deprels;
-    parse_to_vector(parse_units, heads, deprels);
+    Corpus::parse_units_to_vector(parse_units, heads, deprels);
     return is_tree(heads);
   }
 
   static bool is_tree_and_projective(const ParseUnits& parse_units) {
     std::vector<unsigned> heads;
     std::vector<unsigned> deprels;
-    parse_to_vector(parse_units, heads, deprels);
+    Corpus::parse_units_to_vector(parse_units, heads, deprels);
     return (is_tree(heads) && is_projective(heads));
   }
 };

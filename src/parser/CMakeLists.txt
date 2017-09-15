@@ -36,9 +36,9 @@ target_link_libraries (twpipe_parser
     dynet_layer
     twpipe_utils)
 
-ADD_EXECUTABLE (generate_ensemble_data
-	generate_ensemble_data.cc
-	ensemble_generator.h
-	ensemble_generator.cc)
+add_executable (generate_parse_ensemble_data
+    generate_ensemble_data.cc
+    ensemble_generator.h
+    ensemble_generator.cc)
 
-TARGET_LINK_LIBRARIES (generate_ensemble_data ${LIBS} twpipe_parser twpipe_utils)
+target_link_libraries (generate_parse_ensemble_data ${LIBS} twpipe_parser twpipe_utils)

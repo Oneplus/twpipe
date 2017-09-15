@@ -1,5 +1,5 @@
-#ifndef __TWPIPE_ENSEMBLE_GENERATOR_H__
-#define __TWPIPE_ENSEMBLE_GENERATOR_H__
+#ifndef __TWPIPE_PARSER_ENSEMBLE_GENERATOR_H__
+#define __TWPIPE_PARSER_ENSEMBLE_GENERATOR_H__
 
 #include <vector>
 #include <boost/program_options.hpp>
@@ -9,7 +9,7 @@ namespace po = boost::program_options;
 
 namespace twpipe {
 
-struct EnsembleDataGenerator {
+struct EnsembleParseDataGenerator {
   enum ENSEMBLE_METHOD_TYPE { kProbability, kLogitsMean, kLogitsSum };
   enum ROLLIN_POLICY_TYPE { kExpert, kEpsilonGreedy, kBoltzmann };
 
@@ -24,8 +24,8 @@ struct EnsembleDataGenerator {
 
   static po::options_description get_options();
 
-  EnsembleDataGenerator(std::vector<ParseModel *>& engines,
-                        const po::variables_map & conf);
+  EnsembleParseDataGenerator(std::vector<ParseModel *>& engines,
+                             const po::variables_map & conf);
 
   void generate(const std::vector<std::string> & words,
                 const std::vector<std::string> & postags,
@@ -38,4 +38,4 @@ struct EnsembleDataGenerator {
 
 }
 
-#endif  //  end for __TWPIPE_ENSEMBLE_GENERATOR_H__
+#endif  //  end for __TWPIPE_PARSER_ENSEMBLE_GENERATOR_H__

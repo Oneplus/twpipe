@@ -21,7 +21,13 @@ struct PostagModel {
 
   virtual void decode(const std::vector<std::string> & words,
                       std::vector<std::string> & tags) = 0;
+ 
+  virtual void get_word_reprs(const std::vector<std::string> & words,
+                              std::vector<dynet::Expression> & word_reprs) = 0;
 
+  virtual dynet::Expression get_score(dynet::Expression & word_repr,
+                                      unsigned prev_tag) = 0;
+  
   virtual dynet::Expression objective(const Instance & inst) = 0;
 
   void postag(const std::vector<std::string> & words);

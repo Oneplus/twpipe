@@ -35,14 +35,6 @@ struct Instance {
   ParseUnits parse_units;
 };
 
-void parse_to_vector(const ParseUnits& parse,
-                     std::vector<unsigned>& heads,
-                     std::vector<unsigned>& deprels);
-
-void vector_to_parse(const std::vector<unsigned>& heads,
-                     const std::vector<unsigned>& deprels,
-                     ParseUnits& parse);
-
 unsigned utf8_len(unsigned char x);
 
 struct Corpus {
@@ -63,6 +55,24 @@ struct Corpus {
   std::unordered_map<unsigned, unsigned> counter;
 
   Corpus();
+
+  static void vector_to_input_units(const std::vector<std::string> & words,
+                                    const std::vector<std::string> & postags,
+                                    InputUnits & units);
+
+  static void vector_to_parse_units(const std::vector<unsigned>& heads,
+                                    const std::vector<unsigned>& deprels,
+                                    ParseUnits& parse,
+                                    bool has_pseudo_root=true);
+
+  static void parse_units_to_vector(const ParseUnits& parse,
+                                    std::vector<unsigned>& heads,
+                                    std::vector<unsigned>& deprels);
+
+  static void parse_units_to_vector(const ParseUnits & units,
+                                    std::vector<unsigned> & heads,
+                                    std::vector<std::string> & deprels,
+                                    bool add_pseduo_root = false);
 
   void load_training_data(const std::string& filename);
 

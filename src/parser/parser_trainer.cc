@@ -196,7 +196,7 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
   TransitionSystem & sys = engine.sys;
 
   std::vector<unsigned> ref_heads, ref_deprels;
-  parse_to_vector(parse_units, ref_heads, ref_deprels);
+  Corpus::parse_units_to_vector(parse_units, ref_heads, ref_deprels);
 
   dynet::ComputationGraph cg;
   engine.new_graph(cg);
@@ -293,7 +293,7 @@ float SupervisedTrainer::train_structure_full_tree(const InputUnits & input_unit
   engine.new_graph(cg);
 
   std::vector<unsigned> gold_heads, gold_deprels, gold_actions;
-  parse_to_vector(parse_units, gold_heads, gold_deprels);
+  Corpus::parse_units_to_vector(parse_units, gold_heads, gold_deprels);
   sys.get_oracle_actions(gold_heads, gold_deprels, gold_actions);
 
   unsigned len = input_units.size();

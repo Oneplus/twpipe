@@ -7,7 +7,7 @@
 
 namespace twpipe {
 
-po::options_description EnsembleDataGenerator::get_options() {
+po::options_description EnsembleParseDataGenerator::get_options() {
   po::options_description cmd("Ensemble data generate options.");
   cmd.add_options()
     ("ensemble-method", po::value<std::string>()->default_value("prob"), "ensemble methods [prob|logits_mean|logits_sum]")
@@ -21,8 +21,8 @@ po::options_description EnsembleDataGenerator::get_options() {
   return cmd;
 }
 
-EnsembleDataGenerator::EnsembleDataGenerator(std::vector<ParseModel*>& engines,
-                                             const po::variables_map & conf) : engines(engines) {
+EnsembleParseDataGenerator::EnsembleParseDataGenerator(std::vector<ParseModel*>& engines,
+                                                       const po::variables_map & conf) : engines(engines) {
   _INFO << "[twpipe|parser|ensemble_generator] number of ensembled parsers: " << engines.size();
 
   std::string ensemble_method_name = conf["ensemble-method"].as<std::string>();
@@ -69,12 +69,12 @@ EnsembleDataGenerator::EnsembleDataGenerator(std::vector<ParseModel*>& engines,
   }
 }
 
-void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
-                                     const std::vector<std::string>& postags,
-                                     const std::vector<unsigned> & heads,
-                                     const std::vector<std::string> & deprels,
-                                     std::vector<unsigned>& actions,
-                                     std::vector<std::vector<float>>& prob) {
+void EnsembleParseDataGenerator::generate(const std::vector<std::string>& words,
+                                          const std::vector<std::string>& postags,
+                                          const std::vector<unsigned> & heads,
+                                          const std::vector<std::string> & deprels,
+                                          std::vector<unsigned>& actions,
+                                          std::vector<std::vector<float>>& prob) {
   unsigned n_engines = engines.size();
   dynet::ComputationGraph cg;
 
@@ -152,7 +152,7 @@ void EnsembleDataGenerator::generate(const std::vector<std::string>& words,
     } else {
       std::vector<float> valid_prob;
       for (unsigned act : valid_actions) {
-        valid_prob.push_back(log(ensemble_probs[act] / temperature));
+        valid_prob.push_back(log(ensemble_probs[act]) / temperature);
       }
       // renormalize
       Math::softmax_inplace(valid_prob);

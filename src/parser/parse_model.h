@@ -69,16 +69,7 @@ struct ParseModel {
   virtual dynet::Expression get_scores(StateCheckpoint * checkpoint) = 0;
 
   virtual dynet::Expression l2() = 0;
- 
-  static void raw_to_input_units(const std::vector<std::string> & words,
-                                 const std::vector<std::string> & postags,
-                                 InputUnits & units);
-
-  static void parse_units_to_raw(const ParseUnits & units,
-                                 std::vector<unsigned> & heads,
-                                 std::vector<std::string> & deprels,
-                                 bool add_pseduo_root=false);
-
+  
   void predict(dynet::ComputationGraph& cg,
                const InputUnits& input,
                ParseUnits& parse);

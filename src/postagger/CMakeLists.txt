@@ -19,3 +19,15 @@ target_link_libraries (twpipe_postagger
     dynet
     dynet_layer
     twpipe_utils)
+
+add_executable (generate_postag_ensemble_data
+    generate_ensemble_data.cc
+    ensemble_generator.h
+    ensemble_generator.cc
+    )
+
+target_link_libraries (generate_postag_ensemble_data
+    ${LIBS}
+    dynet
+    dynet_layer
+    twpipe_utils)
