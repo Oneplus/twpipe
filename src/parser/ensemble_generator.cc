@@ -10,7 +10,6 @@ namespace twpipe {
 po::options_description EnsembleParseDataGenerator::get_options() {
   po::options_description cmd("Ensemble data generate options.");
   cmd.add_options()
-    ("ensemble-method", po::value<std::string>()->default_value("prob"), "ensemble methods [prob|logits_mean|logits_sum]")
     ("ensemble-n-samples", po::value<unsigned>()->default_value(1), "the number of samples.")
     ("ensemble-rollin", po::value<std::string>()->default_value("boltzmann"), "the rollin-method [expert|egreedy|boltzmann]")
     ("ensemble-expert-proportion", po::value<float>()->default_value(0.f), "the proportion of expert policy ")
@@ -24,19 +23,6 @@ po::options_description EnsembleParseDataGenerator::get_options() {
 EnsembleParseDataGenerator::EnsembleParseDataGenerator(std::vector<ParseModel*>& engines,
                                                        const po::variables_map & conf) : engines(engines) {
   _INFO << "[twpipe|parser|ensemble_generator] number of ensembled parsers: " << engines.size();
-
-  std::string ensemble_method_name = conf["ensemble-method"].as<std::string>();
-  if (ensemble_method_name == "prob") {
-    ensemble_method = kProbability;
-  } else if (ensemble_method_name == "logits_mean") {
-    ensemble_method = kLogitsMean;
-  } else if (ensemble_method_name == "logits_sum") {
-    ensemble_method = kLogitsSum;
-  } else {
-    _ERROR << "[twpipe|parser|ensemble_generator] unknown ensemble method: " << ensemble_method_name;
-    exit(1);
-  }
-  _INFO << "[twpipe|parser|ensemble_generator] ensemble method: " << ensemble_method_name;
 
   n_samples = conf["ensemble-n-samples"].as<unsigned>();
   _INFO << "[twpipe|parser|ensemble_generator] generate " << n_samples << " for each instance.";
@@ -79,7 +65,7 @@ void EnsembleParseDataGenerator::generate(const std::vector<std::string>& words,
   dynet::ComputationGraph cg;
 
   InputUnits input;
-  ParseModel::raw_to_input_units(words, postags, input);
+  Corpus::vector_to_input_units(words, postags, input);
   std::vector<ParseModel::StateCheckpoint *> checkpoints(n_engines, nullptr);
 
   unsigned len = input.size();
@@ -119,20 +105,12 @@ void EnsembleParseDataGenerator::generate(const std::vector<std::string>& words,
     for (unsigned i = 0; i < n_engines; ++i) {
       dynet::Expression score_exprs = engines[i]->get_scores(checkpoints[i]);
       std::vector<float> ensemble_score = dynet::as_vector(cg.get_value(score_exprs));
-      if (ensemble_method == kProbability) {
-        Math::softmax_inplace(ensemble_score);
-      }
+      Math::softmax_inplace(ensemble_score);
       for (unsigned c = 0; c < ensemble_score.size(); ++c) {
         ensemble_probs[c] += ensemble_score[c];
       }
     }
-
-    if (ensemble_method == kProbability || ensemble_method == kLogitsMean) {
-      for (auto & p : ensemble_probs) { p /= n_engines; }
-    }
-    if (ensemble_method == kLogitsMean || ensemble_method == kLogitsSum) {
-      Math::softmax_inplace(ensemble_probs);
-    }
+    for (auto & p : ensemble_probs) { p /= n_engines; }
 
     unsigned action = UINT_MAX;
     if (rollin_policy == kExpert) {

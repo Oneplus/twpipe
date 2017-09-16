@@ -138,8 +138,17 @@ int main(int argc, char* argv[]) {
       builder.to_json();
 
       twpipe::PostagModel * engine = builder.build(model);
-      twpipe::PostaggerTrainer trainer(*engine, opt_builder, conf);
-      trainer.train(corpus);
+      if (!conf["train-distill-postagger"].as<float>()) {
+        twpipe::PostaggerTrainer trainer(*engine, opt_builder, conf);
+        trainer.train(corpus);
+      } else {
+        twpipe::EnsembleInstances instances;
+        twpipe::EnsembleUtils::load_ensemble_instances(
+          conf["parse-ensemble-data"].as<std::string>(),
+          instances);
+        twpipe::PostaggerEnsembleTrainer trainer((*engine), opt_builder, conf);
+        trainer.train(corpus, instances);
+      }
     }
     if (conf["train-parser"].as<bool>() == true) {
       _INFO << "[twpipe] going to train parser.";
@@ -154,7 +163,7 @@ int main(int argc, char* argv[]) {
         trainer.train(corpus);
       } else {
         twpipe::EnsembleInstances instances;
-        twpipe::SupervisedEnsembleTrainer::load_ensemble_instances(
+        twpipe::EnsembleUtils::load_ensemble_instances(
           conf["parse-ensemble-data"].as<std::string>(),
           instances);
         twpipe::SupervisedEnsembleTrainer trainer((*engine), opt_builder, conf);

@@ -410,12 +410,6 @@ void SupervisedTrainer::get_orders(Corpus& corpus,
   }
 }
 
-EnsembleInstance::EnsembleInstance(std::vector<unsigned>& actions,
-                                   std::vector<std::vector<float>>& probs) :
-  actions(actions),
-  probs(probs) {
-}
-
 SupervisedEnsembleTrainer::SupervisedEnsembleTrainer(ParseModel & engine,
                                                      OptimizerBuilder & opt_builder,
                                                      const po::variables_map & conf) :
@@ -466,11 +460,11 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
       llh_in_batch += lp;
       noisifier.denoisify(units);
     }
-    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh;
+    _INFO << "[parse|ensemble|train] end of iter #" << iter << " loss " << llh;
     float las = evaluate(corpus);
     if (las > best_las) {
       best_las = las;
-      _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+      _INFO << "[parse|ensemble|train] new best record achieved: " << best_las << ", saved.";
       Model::get()->to_json(Model::kParserName, engine.model);
     }
     trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
@@ -492,7 +486,7 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
   ParseModel::StateCheckpoint * checkpoint = engine.get_initial_checkpoint();
   engine.initialize(cg, input_units, state, checkpoint);
 
-  const std::vector<unsigned> & actions = ensemble_instance.actions;
+  const std::vector<unsigned> & actions = ensemble_instance.categories;
   const std::vector<std::vector<float>> & probs = ensemble_instance.probs;
 
   unsigned illegal_action = sys.num_actions();
@@ -525,21 +519,6 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
     trainer->update();
   }
   return ret;
-}
-
-void SupervisedEnsembleTrainer::load_ensemble_instances(const std::string & path,
-                                                        EnsembleInstances & instances) {
-  nlohmann::json payload;
-  std::ifstream ifs(path);
-  std::string buffer;
-  while (std::getline(ifs, buffer)) {
-    payload = nlohmann::json::parse(buffer.begin(), buffer.end());
-    unsigned id = payload.at("id").get<unsigned>();
-    std::vector<unsigned> actions = payload.at("action").get<std::vector<unsigned>>();
-    std::vector<std::vector<float>> probs = payload.at("prob").get<std::vector<std::vector<float>>>();
-
-    instances.insert(std::make_pair(id, EnsembleInstance(actions, probs)));
-  }
 }
 
 }

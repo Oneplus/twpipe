@@ -8,6 +8,7 @@
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/corpus.h"
 #include "twpipe/json.hpp"
+#include "twpipe/ensemble.h"
 #include "parser/parse_model_builder.h"
 #include "parser/ensemble_generator.h"
 #include <boost/algorithm/string.hpp>
@@ -109,9 +110,9 @@ int main(int argc, char* argv[]) {
 
       if (!actions.empty()) {
         nlohmann::json output;
-        output = {{"id",     sid},
-                  {"action", actions},
-                  {"prob",   prob}};
+        output = {{twpipe::EnsembleInstance::id_name,       sid},
+                  {twpipe::EnsembleInstance::category_name, actions},
+                  {twpipe::EnsembleInstance::prob_name,     prob}};
         std::cout << output << std::endl;
       }
       tokens.clear();

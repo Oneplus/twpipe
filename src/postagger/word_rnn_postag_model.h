@@ -18,8 +18,8 @@ struct WordRNNPostagModel : public PostagModel {
   SymbolEmbedding word_embed;
   SymbolEmbedding pos_embed;
   InputLayer embed_input;
-  Merge3Layer merge;
-  DenseLayer dense;
+  DenseLayer dense1;
+  DenseLayer dense2;
 
   unsigned word_size;
   unsigned word_dim;
@@ -40,8 +40,8 @@ struct WordRNNPostagModel : public PostagModel {
     word_embed(model, word_size, word_dim),
     pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
     embed_input(embed_dim),
-    merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
-    dense(model, word_hidden_dim, AlphabetCollection::get()->pos_map.size()),
+    dense1(model, word_hidden_dim + word_hidden_dim + pos_dim, word_hidden_dim),
+    dense2(model, word_hidden_dim, AlphabetCollection::get()->pos_map.size()),
     word_size(word_size),
     word_dim(word_dim),
     word_hidden_dim(word_hidden_dim),
@@ -63,38 +63,57 @@ struct WordRNNPostagModel : public PostagModel {
     word_embed.new_graph(cg);
     pos_embed.new_graph(cg);
     embed_input.new_graph(cg);
-    merge.new_graph(cg);
-    dense.new_graph(cg);
+    dense1.new_graph(cg);
+    dense2.new_graph(cg);
   }
 
-  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
-    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
-
+  void initialize(const std::vector<std::string> & words) override {
     std::vector<std::vector<float>> embeddings;
     WordEmbedding::get()->render(words, embeddings);
 
     unsigned n_words = words.size();
-    std::vector<dynet::Expression> word_exprs(n_words);
-
     unsigned unk = AlphabetCollection::get()->word_map.get(Corpus::UNK);
+    std::vector<dynet::Expression> word_reprs(n_words);
     for (unsigned i = 0; i < n_words; ++i) {
       std::string word = words[i];
       unsigned wid = unk;
       if (AlphabetCollection::get()->word_map.contains(word)) {
         wid = AlphabetCollection::get()->word_map.get(word);
       }
-      word_exprs[i] = dynet::concatenate({ word_embed.embed(wid), embed_input.get_output(embeddings[i]) });
+      word_reprs[i] = dynet::concatenate({
+        word_embed.embed(wid), embed_input.get_output(embeddings[i]) 
+      });
     }
 
-    word_rnn.add_inputs(word_exprs);
+    word_rnn.add_inputs(word_reprs);
+  }
+  
+  dynet::Expression get_emit_score(dynet::Expression & feature) override {
+    dynet::Expression logits = dense2.get_output(dynet::rectify(dense1.get_output(feature)));
+    return logits;
+  }
+
+  dynet::Expression get_feature(unsigned i, unsigned prev_tag) override {
+    auto payload = word_rnn.get_output(i);
+    dynet::Expression feature = dynet::concatenate({ payload.first, payload.second, pos_embed.embed(prev_tag) });
+    return feature;
+  }
+  
+  void decode(const std::vector<std::string> & words,
+              std::vector<std::string> & tags,
+              std::vector<std::vector<float>> & probs = std::vector<std::vector<float>>()) override {
+    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+
+    unsigned n_words = words.size();
+    std::vector<dynet::Expression> word_reprs(n_words);
+    word_rnn.add_inputs(word_reprs);
     tags.resize(n_words);
+    std::vector<float> temp_scores;
     unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
-      auto payload = word_rnn.get_output(i);
-      dynet::Expression logits = dense.get_output(dynet::rectify(
-        merge.get_output(payload.first, payload.second, pos_embed.embed(prev_label))
-      ));
-      std::vector<float> scores = dynet::as_vector((word_embed.cg)->get_value(logits));
+      dynet::Expression logits = get_emit_score(get_feature(i, prev_label));
+      std::vector<float> & scores = probs.size() == 0 ? temp_scores : probs[i];
+      scores = dynet::as_vector((word_embed.cg)->get_value(logits));
       unsigned label = std::max_element(scores.begin(), scores.end()) - scores.begin();
 
       tags[i] = pos_map.get(label);
@@ -104,34 +123,19 @@ struct WordRNNPostagModel : public PostagModel {
 
   dynet::Expression objective(const Instance & inst) override {
     // embeddings counting w/o pseudo root.
-    std::vector<std::vector<float>> embeddings;
-    std::vector<std::string> words;
-    for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-      words.push_back(inst.input_units[i].word);
-    }
-    WordEmbedding::get()->render(words, embeddings);
-
-    const InputUnits & input_units = inst.input_units;
-    unsigned n_words_w_root = input_units.size();
-    unsigned n_words = n_words_w_root - 1;
-    BOOST_ASSERT_MSG(n_words == embeddings.size(), "[postag|model] number of dimension not equal.");
-
-    std::vector<dynet::Expression> word_exprs(n_words);
+    unsigned n_words = inst.input_units.size() - 1;
+    std::vector<std::string> words(n_words);
     std::vector<unsigned> labels(n_words);
 
-    for (unsigned i = 1; i < n_words_w_root; ++i) {
-      word_exprs[i - 1] = dynet::concatenate({ word_embed.embed(input_units[i].wid), embed_input.get_output(embeddings[i - 1]) });
-      labels[i - 1] = input_units[i].pid;
+    for (unsigned i = 1; i < inst.input_units.size(); ++i) {
+      words[i - 1] = inst.input_units[i].word;
+      labels[i - 1] = inst.input_units[i].pid;
     }
-
-    word_rnn.add_inputs(word_exprs);
+    initialize(words);
     std::vector<dynet::Expression> losses(n_words);
     unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
-      auto payload = word_rnn.get_output(i);
-      dynet::Expression logits = dense.get_output(dynet::rectify(
-        merge.get_output(payload.first, payload.second, pos_embed.embed(prev_label))
-      ));
+      dynet::Expression logits = get_emit_score(get_feature(i, prev_label));
       losses[i] = dynet::pickneglogsoftmax(logits, labels[i]);
       prev_label = labels[i];
     }

@@ -8,6 +8,7 @@
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/corpus.h"
 #include "twpipe/json.hpp"
+#include "twpipe/ensemble.h"
 #include "postagger/postag_model_builder.h"
 #include "postagger/ensemble_generator.h"
 #include <boost/algorithm/string.hpp>
@@ -101,10 +102,15 @@ int main(int argc, char* argv[]) {
   while (std::getline(ifs, buffer)) {
     boost::algorithm::trim(buffer);
     if (buffer.empty()) {
-      generator.generate(tokens, postags, prob);
+      std::vector<unsigned> pred_postags;
+      generator.generate(tokens, postags, pred_postags, prob);
 
       nlohmann::json output;
-      output = { { "id", sid }, { "prob", prob } };
+      output = {
+        { twpipe::EnsembleInstance::id_name, sid },
+        { twpipe::EnsembleInstance::category_name, pred_postags},
+        { twpipe::EnsembleInstance::prob_name, prob }
+      };
       std::cout << output << std::endl;
       tokens.clear();
       postags.clear();

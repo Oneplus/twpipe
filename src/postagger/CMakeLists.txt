@@ -26,8 +26,4 @@ add_executable (generate_postag_ensemble_data
     ensemble_generator.cc
     )
 
-target_link_libraries (generate_postag_ensemble_data
-    ${LIBS}
-    dynet
-    dynet_layer
-    twpipe_utils)
+target_link_libraries (generate_postag_ensemble_data twpipe_postagger twpipe_utils)

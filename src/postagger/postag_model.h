@@ -20,13 +20,14 @@ struct PostagModel {
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 
   virtual void decode(const std::vector<std::string> & words,
-                      std::vector<std::string> & tags) = 0;
- 
-  virtual void get_word_reprs(const std::vector<std::string> & words,
-                              std::vector<dynet::Expression> & word_reprs) = 0;
+                      std::vector<std::string> & tags,
+                      std::vector<std::vector<float>> & probs = std::vector<std::vector<float>>()) = 0;
 
-  virtual dynet::Expression get_score(dynet::Expression & word_repr,
-                                      unsigned prev_tag) = 0;
+  virtual void initialize(const std::vector<std::string> & words) = 0;
+
+  virtual dynet::Expression get_feature(unsigned i, unsigned prev_tag) = 0;
+
+  virtual dynet::Expression get_emit_score(dynet::Expression & feature) = 0;
   
   virtual dynet::Expression objective(const Instance & inst) = 0;
 

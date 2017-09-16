@@ -10,7 +10,11 @@ namespace po = boost::program_options;
 namespace twpipe {
 
 struct EnsemblePostagDataGenerator {
+  enum ROLLIN_POLICY_TYPE { kExpert, kPredict };
+  ROLLIN_POLICY_TYPE rollin_policy;
   unsigned n_samples;
+  float proportion;
+
   std::vector<PostagModel *>& engines;
 
   static po::options_description get_options();
@@ -19,7 +23,8 @@ struct EnsemblePostagDataGenerator {
                               const po::variables_map & conf);
 
   void generate(const std::vector<std::string> & words,
-                const std::vector<std::string> & postags,
+                const std::vector<std::string> & gold_postags,
+                std::vector<unsigned> & pred_postags,
                 std::vector<std::vector<float>> & prob);
 
 };

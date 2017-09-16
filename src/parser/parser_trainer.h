@@ -9,6 +9,7 @@
 #include "noisify.h"
 #include "twpipe/trainer.h"
 #include "twpipe/optimizer_builder.h"
+#include "twpipe/ensemble.h"
 
 namespace po = boost::program_options;
 
@@ -69,26 +70,13 @@ struct SupervisedTrainer : public ParserTrainer {
                   bool non_projective);
 };
 
-struct EnsembleInstance {
-  std::vector<unsigned> actions;
-  std::vector<std::vector<float>> probs;
-
-  EnsembleInstance(std::vector<unsigned> & actions,
-                   std::vector<std::vector<float>> & probs);
-};
-
-typedef std::unordered_map<unsigned, EnsembleInstance> EnsembleInstances;
-
 struct SupervisedEnsembleTrainer : public ParserTrainer {
   SupervisedEnsembleTrainer(ParseModel & engine,
                             OptimizerBuilder & opt_builder,
                             const po::variables_map & conf);
 
   static po::options_description get_options();
-
-  static void load_ensemble_instances(const std::string & path,
-                                      EnsembleInstances & instances);
-
+ 
   void train(Corpus & corpus, EnsembleInstances & ensemble_instances);
 
   float train_full_tree(const InputUnits & input_units,
