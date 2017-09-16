@@ -9,7 +9,8 @@ po::options_description EnsemblePostagDataGenerator::get_options() {
   po::options_description cmd("Ensemble data generate options.");
   cmd.add_options()
     ("ensemble-n-samples", po::value<unsigned>()->default_value(1), "the number of samples.")
-    ("ensemble-rollin", po::value<std::string>()->default_value("boltzmann"), "the rollin-method [expert|egreedy|boltzmann]")
+    ("ensemble-rollin", po::value<std::string>()->default_value("predict"), "the rollin-method [expert|predict]")
+    ("ensemble-expert-proportion", po::value<float>()->default_value(0.f), "the proportion of expert policy ")
     ;
 
   return cmd;
@@ -27,7 +28,7 @@ EnsemblePostagDataGenerator::EnsemblePostagDataGenerator(std::vector<PostagModel
     rollin_policy = kExpert;
     proportion = conf["ensemble-expert-proportion"].as<float>();
     if (proportion > 1.) {
-      proportion = 1.;
+      proportion = 1.f;
       _INFO << "[twpipe|postag|ensemble_generator] proportion should be less than 1, reset.";
     } else if (proportion < 0.) {
       _INFO << "[twpipe|postag|ensemble_generator] proportion should be greater than 0., reset.";

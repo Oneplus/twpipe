@@ -138,5 +138,6 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+  _INFO << "[twpipe|generator] generate " << sid + 1 << " instances.";
   return 0;
 }

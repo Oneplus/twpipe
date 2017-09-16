@@ -22,8 +22,10 @@ template<> const char* WordCharacterGRUPostagModel::name = "WordCharacterGRUPost
 template<> const char* WordCharacterLSTMPostagModel::name = "WordCharacterLSTMPostagModel";
 
 PostagModelBuilder::PostagModelBuilder(po::variables_map & conf) {
-  model_name = conf["pos-model-name"].as<std::string>();
-  model_type = get_model_type(model_name);
+  if (conf.count("pos-model-name")) {
+    model_name = conf["pos-model-name"].as<std::string>();
+    model_type = get_model_type(model_name);
+  }
 
   word_size = AlphabetCollection::get()->word_map.size();
   char_size = AlphabetCollection::get()->char_map.size();
@@ -93,11 +95,11 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
 void PostagModelBuilder::to_json() {
   Model::get()->to_json(Model::kPostaggerName, {
     {"name", model_name},
-    {"word-hidden-dim", boost::lexical_cast<std::string>(word_hidden_dim)},
-    {"word-n-layers", boost::lexical_cast<std::string>(word_n_layers)},
-    {"pos-dim", boost::lexical_cast<std::string>(pos_dim)},
-    {"n-postags", boost::lexical_cast<std::string>(pos_size)},
-    {"emb-dim", boost::lexical_cast<std::string>(embed_dim)}
+    {"word-hidden-dim", std::to_string(word_hidden_dim)},
+    {"word-n-layers", std::to_string(word_n_layers)},
+    {"pos-dim", std::to_string(pos_dim)},
+    {"n-postags", std::to_string(pos_size)},
+    {"emb-dim", std::to_string(embed_dim)}
   });
 
   if (model_type == kCharacterGRUPostagModel ||
@@ -158,7 +160,11 @@ PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) 
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-hidden-dim"));
     char_n_layers =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-n-layers"));
-  } else {
+  }
+  if (model_type == kWordCharacterGRUPostagModel ||
+      model_type == kWordCharacterLSTMPostagModel ||
+      model_type == kWordLSTMPostagModel ||
+      model_type == kWordGRUPostagModel){
     temp_size = 
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "n-words"));
     if (word_size == 0) {

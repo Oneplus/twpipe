@@ -45,6 +45,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
   po::options_description training_opts = twpipe::Trainer::get_options();
   po::options_description tokenizer_opts = twpipe::TokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
+  po::options_description postagger_ensemble_train_opts = twpipe::PostaggerEnsembleTrainer::get_options();
   po::options_description parser_opts = twpipe::ParseModel::get_options();
   po::options_description parser_train_opts = twpipe::ParserTrainer::get_options();
   po::options_description parser_supervised_train_opts = twpipe::SupervisedTrainer::get_options();
@@ -64,6 +65,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
     .add(training_opts)
     .add(tokenizer_opts)
     .add(postagger_opts)
+    .add(postagger_ensemble_train_opts)
     .add(parser_opts)
     .add(parser_supervised_train_opts)
     .add(parser_ensemble_train_opts)
@@ -138,13 +140,13 @@ int main(int argc, char* argv[]) {
       builder.to_json();
 
       twpipe::PostagModel * engine = builder.build(model);
-      if (!conf["train-distill-postagger"].as<float>()) {
+      if (!conf["train-distill-postagger"].as<bool>()) {
         twpipe::PostaggerTrainer trainer(*engine, opt_builder, conf);
         trainer.train(corpus);
       } else {
         twpipe::EnsembleInstances instances;
         twpipe::EnsembleUtils::load_ensemble_instances(
-          conf["parse-ensemble-data"].as<std::string>(),
+          conf["pos-ensemble-data"].as<std::string>(),
           instances);
         twpipe::PostaggerEnsembleTrainer trainer((*engine), opt_builder, conf);
         trainer.train(corpus, instances);
@@ -240,7 +242,7 @@ int main(int argc, char* argv[]) {
         for (unsigned i = 0; i < tokens.size(); ++i) {
           std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
                     << (pos_engine != nullptr ? postags[i] : "_") << "\t_\t"
-                    << (par_engine != nullptr ? boost::lexical_cast<std::string>(heads[i]) : "_") << "\t"
+                    << (par_engine != nullptr ? std::to_string(heads[i]) : "_") << "\t"
                     << (par_engine != nullptr ? deprels[i] : "_") << "\t_\t_\n";
         }
         std::cout << "\n";
@@ -281,10 +283,10 @@ int main(int argc, char* argv[]) {
       std::string sentence;
       std::string buffer;
       std::ifstream ifs(conf["input-file"].as<std::string>());
-      float n_pos_corr = 0.;
-      float n_uas_corr = 0.;
-      float n_las_corr = 0.;
-      float n_total = 0.;
+      float n_pos_corr = 0.f;
+      float n_uas_corr = 0.f;
+      float n_las_corr = 0.f;
+      float n_total = 0.f;
       while (std::getline(ifs, buffer)) {
         boost::algorithm::trim(buffer);
         if (buffer.empty()) {

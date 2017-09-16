@@ -33,7 +33,7 @@ void PostaggerTrainer::train(const Corpus & corpus) {
     std::shuffle(order.begin(), order.end(), *dynet::rndeng);
     _INFO << "[postag|train] start training at " << iter << "-th iteration.";
 
-    float loss = 0.;
+    float loss = 0.f;
     for (unsigned sid = 0; sid < corpus.n_train; ++sid) {
       const Instance & inst = corpus.training_data.at(order[sid]);
 
@@ -99,7 +99,7 @@ PostaggerEnsembleTrainer::PostaggerEnsembleTrainer(PostagModel & engine,
 po::options_description PostaggerEnsembleTrainer::get_options() {
   po::options_description cmd("Postagger ensemble learning options");
   cmd.add_options()
-    ("postag-ensemble-data", po::value<std::string>(), "The path to the ensemble data.")
+    ("pos-ensemble-data", po::value<std::string>(), "The path to the ensemble data.")
     ;
   return cmd;
 }
