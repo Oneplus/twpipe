@@ -20,8 +20,7 @@ struct PostagModel {
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 
   virtual void decode(const std::vector<std::string> & words,
-                      std::vector<std::string> & tags,
-                      std::vector<std::vector<float>> & probs = std::vector<std::vector<float>>()) = 0;
+                      std::vector<std::string> & tags) = 0;
 
   virtual void initialize(const std::vector<std::string> & words) = 0;
 

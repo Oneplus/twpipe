@@ -66,7 +66,8 @@ void EnsemblePostagDataGenerator::generate(const std::vector<std::string> & word
     ensembled_prob.resize(pos_map.size());
 
     for (unsigned n = 0; n < n_engines; ++n) {
-      dynet::Expression logits = engines[i]->get_emit_score(engines[i]->get_feature(i, prev_label));
+      dynet::Expression feature = engines[i]->get_feature(i, prev_label);
+      dynet::Expression logits = engines[i]->get_emit_score(feature);
       std::vector<float> scores = dynet::as_vector(cg.get_value(logits));
       Math::softmax_inplace(scores);
       for (unsigned m = 0; m < pos_map.size(); ++m) { ensembled_prob[m] += scores[m]; }

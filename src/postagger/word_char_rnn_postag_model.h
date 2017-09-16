@@ -91,7 +91,6 @@ struct WordCharacterRNNPostagModel : public PostagModel {
   
   void initialize(const std::vector<std::string> & words) override {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
-    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     std::vector<std::vector<float>> embeddings;
     WordEmbedding::get()->render(words, embeddings);
@@ -145,8 +144,7 @@ struct WordCharacterRNNPostagModel : public PostagModel {
   }
 
   void decode(const std::vector<std::string> & words,
-              std::vector<std::string> & tags,
-              std::vector<std::vector<float>> & probs = std::vector<std::vector<float>>()) override {
+              std::vector<std::string> & tags) override {
     Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     unsigned n_words = words.size();
@@ -155,9 +153,9 @@ struct WordCharacterRNNPostagModel : public PostagModel {
     unsigned prev_label = root_pos_id;
     std::vector<float> temp_scores;
     for (unsigned i = 0; i < n_words; ++i) {
-      dynet::Expression logits = get_emit_score(get_feature(i, prev_label));
-      std::vector<float> & scores = probs.size() == 0 ? temp_scores : probs[i];
-      scores = dynet::as_vector((word_embed.cg)->get_value(logits));
+      dynet::Expression feature = get_feature(i, prev_label);
+      dynet::Expression logits = get_emit_score(feature);
+      std::vector<float> scores = dynet::as_vector((word_embed.cg)->get_value(logits));
       unsigned label = std::max_element(scores.begin(), scores.end()) - scores.begin();
 
       tags[i] = pos_map.get(label);
@@ -179,7 +177,8 @@ struct WordCharacterRNNPostagModel : public PostagModel {
     std::vector<dynet::Expression> losses(n_words);
     unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
-      dynet::Expression logits = get_emit_score(get_feature(i, prev_label));
+      dynet::Expression feature = get_feature(i, prev_label);
+      dynet::Expression logits = get_emit_score(feature);
       losses[i] = dynet::pickneglogsoftmax(logits, labels[i]);
       prev_label = labels[i];
     }

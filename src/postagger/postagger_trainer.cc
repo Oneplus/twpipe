@@ -146,7 +146,8 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       const std::vector<unsigned> & actions = inst.categories;
       const std::vector<std::vector<float>> & probs = inst.probs;
       for (unsigned i = 0; i < n_words; ++i) {
-        dynet::Expression logits = engine.get_emit_score(engine.get_feature(i, prev_label));
+        dynet::Expression feature = engine.get_feature(i, prev_label);
+        dynet::Expression logits = engine.get_emit_score(feature);
         const std::vector<float> & prob = probs.at(i);
         unsigned dim = prob.size();
         losses.push_back(dynet::dot_product(dynet::input(cg, { dim }, prob), logits));
