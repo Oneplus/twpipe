@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (!twpipe::Model::get()->has_parser_model()) {
-      _ERROR << "[twpipe|generator] doesn't have parser model!";
+      _ERROR << "[twpipe|parse|generator] doesn't have parser model!";
       continue;
     }
     twpipe::ParseModelBuilder par_builder(conf);
@@ -138,6 +138,6 @@ int main(int argc, char* argv[]) {
       }
     }
   }
-  _INFO << "[twpipe|generator] generate " << sid + 1 << " instances.";
+  _INFO << "[twpipe|parse|generator] generate " << sid + 1 << " instances.";
   return 0;
 }

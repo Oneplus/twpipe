@@ -124,6 +124,6 @@ int main(int argc, char* argv[]) {
       postags.push_back(data[3]);
     }
   }
-  _INFO << "[twpipe|generator] generate " << sid + 1 << " instances.";
+  _INFO << "[twpipe|postag|generator] generate " << sid + 1 << " instances.";
   return 0;
 }

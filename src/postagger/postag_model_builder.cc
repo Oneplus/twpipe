@@ -109,24 +109,24 @@ void PostagModelBuilder::to_json() {
       model_type == kCharacterClusterGRUPostagModel ||
       model_type == kCharacterClusterLSTMPostagModel) {
     Model::get()->to_json(Model::kPostaggerName, {
-      { "n-chars", boost::lexical_cast<std::string>(char_size) },
-      { "char-dim", boost::lexical_cast<std::string>(char_dim) },
-      { "char-hidden-dim", boost::lexical_cast<std::string>(char_hidden_dim) },
-      { "char-n-layers", boost::lexical_cast<std::string>(char_n_layers) }
+      { "n-chars", std::to_string(char_size) },
+      { "char-dim", std::to_string(char_dim) },
+      { "char-hidden-dim", std::to_string(char_hidden_dim) },
+      { "char-n-layers", std::to_string(char_n_layers) }
     });
   } else {
     Model::get()->to_json(Model::kPostaggerName, {
-      { "n-words", boost::lexical_cast<std::string>(word_size) },
-      { "word-dim", boost::lexical_cast<std::string>(word_dim) },
+      { "n-words", std::to_string(word_size) },
+      { "word-dim", std::to_string(word_dim) },
     });
   }
 
   if (model_type == kCharacterClusterGRUPostagModel ||
       model_type == kCharacterClusterLSTMPostagModel) {
     Model::get()->to_json(Model::kPostaggerName, {
-      {"cluster-dim", boost::lexical_cast<std::string>(cluster_dim)},
-      {"cluster-hidden-dim", boost::lexical_cast<std::string>(cluster_hidden_dim)},
-      {"cluster-n-layers", boost::lexical_cast<std::string>(cluster_n_layers)},
+      {"cluster-dim", std::to_string(cluster_dim)},
+      {"cluster-hidden-dim", std::to_string(cluster_hidden_dim)},
+      {"cluster-n-layers", std::to_string(cluster_n_layers)},
     });
   }
 }
@@ -145,7 +145,9 @@ PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) 
       model_type == kCharacterGRUPostagCRFModel ||
       model_type == kCharacterLSTMPostagCRFModel ||
       model_type == kCharacterClusterGRUPostagModel ||
-      model_type == kCharacterClusterLSTMPostagModel) {
+      model_type == kCharacterClusterLSTMPostagModel ||
+      model_type == kWordCharacterGRUPostagModel ||
+      model_type == kWordCharacterLSTMPostagModel) {
     temp_size = 
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "n-chars"));
     if (char_size == 0) {
