@@ -51,6 +51,7 @@ void WordEmbedding::load(const std::string & embedding_file, unsigned dim) {
 }
 
 void WordEmbedding::empty(unsigned dim) {
+  dim_ = dim;
   pretrained[Corpus::BAD0] = std::vector<float>(dim, 0.);
   pretrained[Corpus::UNK] = std::vector<float>(dim, 0.);
   pretrained[Corpus::ROOT] = std::vector<float>(dim, 0.);

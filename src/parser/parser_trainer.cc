@@ -437,7 +437,7 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
   bool allow_nonprojective = engine.sys.allow_nonprojective();
   for (auto & payload : ensemble_instances) {
     unsigned id = payload.first;
-    if (ensemble_instances.count(id) == 0) { continue; }
+    if (corpus.training_data.count(id) == 0) { continue; }
     order.push_back(id);
   }
 
@@ -500,7 +500,7 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
     const std::vector<float> & prob = probs[n_actions];
     unsigned n_probs = prob.size();
 
-    loss.push_back(-dynet::dot_product(
+    loss.push_back(dynet::dot_product(
       dynet::input(*score_expr.pg, { n_probs }, prob),
       dynet::log_softmax(score_expr)
     ));
@@ -513,7 +513,7 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
   engine.destropy_checkpoint(checkpoint);
   float ret = 0.;
   if (!loss.empty()) {
-    dynet::Expression l = dynet::sum(loss);
+    dynet::Expression l = -dynet::sum(loss);
     ret = dynet::as_scalar(cg.forward(l));
     cg.backward(l);
     trainer->update();

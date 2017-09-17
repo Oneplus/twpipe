@@ -106,7 +106,7 @@ po::options_description PostaggerEnsembleTrainer::get_options() {
 
 void PostaggerEnsembleTrainer::train(Corpus & corpus,
                                      EnsembleInstances & ensemble_instances) {
-  _INFO << "[postag|ensemble|train] start lstm-parser supervised training.";
+  _INFO << "[postag|ensemble|train] start postagger supervised training.";
 
   dynet::ParameterCollection & model = engine.model;
   dynet::Trainer * trainer = opt_builder.build(model);
@@ -115,7 +115,7 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
   std::vector<unsigned> order;
   for (auto & payload : ensemble_instances) {
     unsigned id = payload.first;
-    if (ensemble_instances.count(id) == 0) { continue; }
+    if (corpus.training_data.count(id) == 0) { continue; }
     order.push_back(id);
   }
 
@@ -139,24 +139,33 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       for (unsigned i = 1; i < units.size(); ++i) {
         words[i - 1] = units[i].word;
       }
+
       engine.initialize(words);
       unsigned prev_label = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
 
-      std::vector<dynet::Expression> losses;
+      std::vector<dynet::Expression> loss;
       const std::vector<unsigned> & actions = inst.categories;
       const std::vector<std::vector<float>> & probs = inst.probs;
+
+      unsigned n_pos = probs.at(0).size();
       for (unsigned i = 0; i < n_words; ++i) {
         dynet::Expression feature = engine.get_feature(i, prev_label);
         dynet::Expression logits = engine.get_emit_score(feature);
         const std::vector<float> & prob = probs.at(i);
-        unsigned dim = prob.size();
-        losses.push_back(dynet::dot_product(dynet::input(cg, { dim }, prob), logits));
+
+        loss.push_back(dynet::dot_product(
+          dynet::input(cg, { n_pos }, prob),
+          dynet::log_softmax(logits)
+        ));
         prev_label = actions.at(i);
       }
-      dynet::Expression loss_expr = dynet::sum(losses);
-      float l = dynet::as_scalar(cg.forward(loss_expr));
-      cg.backward(loss_expr);
-      llh += l;
+      if (!loss.empty()) {
+        dynet::Expression loss_expr = -dynet::sum(loss);
+        float l = dynet::as_scalar(cg.forward(loss_expr));
+        cg.backward(loss_expr);
+        trainer->update();
+        llh += l;
+      }
     }
     _INFO << "[postag|ensemble|train] end of iter #" << iter << " loss " << llh;
     float acc = evaluate(corpus);

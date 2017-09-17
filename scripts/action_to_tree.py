@@ -132,7 +132,7 @@ def main():
         line = line.strip()
         fields = json.loads(line)
         i = fields['id']
-        actions = fields['action']
+        actions = fields['category']
         lines = dataset[i].splitlines()
         body = [line for line in lines if not line.startswith('#')]
         n = len(body)
@@ -146,6 +146,7 @@ def main():
             fields[7] = str(state.deprels_[i + 1])
             print('\t'.join(fields))
         print()
+
 
 if __name__ == "__main__":
     main()

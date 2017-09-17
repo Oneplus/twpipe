@@ -64,7 +64,7 @@ void EnsemblePostagDataGenerator::generate(const std::vector<std::string> & word
   prob.resize(n_words);
   for (unsigned i = 0; i < n_words; ++i) {
     std::vector<float> & ensembled_prob = prob[i];
-    ensembled_prob.resize(pos_map.size());
+    ensembled_prob.resize(pos_map.size(), 0.f);
 
     for (auto engine : engines) {
       dynet::Expression feature = engine->get_feature(i, prev_label);
