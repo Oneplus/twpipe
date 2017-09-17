@@ -315,8 +315,10 @@ int main(int argc, char* argv[]) {
             } else {
               std::cout << heads[i] << "\t" << deprels[i] << "\t_\t_\n";
             }
-            if (postags[i] == gold_postags[i]) { n_pos_corr += 1.; }
-            if (heads[i] == gold_heads[i]) {
+            if (load_postag_model && postags[i] == gold_postags[i]) {
+              n_pos_corr += 1.;
+            }
+            if (load_parse_model && heads[i] == gold_heads[i]) {
               n_uas_corr += 1.; 
               if (deprels[i] == gold_deprels[i]) { n_las_corr += 1.; }
             }
@@ -325,23 +327,35 @@ int main(int argc, char* argv[]) {
           std::cout << "\n";
 
           tokens.clear();
-          postags.clear(); gold_postags.clear();
-          heads.clear(); gold_heads.clear();
-          deprels.clear(); gold_deprels.clear();
+          if (load_postag_model) {
+            postags.clear(); gold_postags.clear();
+          }
+          if (load_parse_model) {
+            heads.clear(); gold_heads.clear();
+            deprels.clear(); gold_deprels.clear();
+          }
         } else if (buffer[0] == '#') {
           if (boost::algorithm::starts_with(buffer, "# text = ")) { sentence = buffer.substr(9); }
         } else {
           std::vector<std::string> data;
           boost::algorithm::split(data, buffer, boost::is_any_of("\t "));
           tokens.push_back(data[1]);
-          gold_postags.push_back(data[3]);
-          gold_heads.push_back(boost::lexical_cast<unsigned>(data[6]));
-          gold_deprels.push_back(data[7]);
+          if (load_postag_model) {
+            gold_postags.push_back(data[3]);
+          }
+          if (load_parse_model) {
+            gold_heads.push_back(boost::lexical_cast<unsigned>(data[6]));
+            gold_deprels.push_back(data[7]);
+          }
         }
       }
-      _INFO << "[evaluate] postag accuracy: " << n_pos_corr / n_total;
-      _INFO << "[evaluate] UAS accuracy: " << n_uas_corr / n_total;
-      _INFO << "[evaluate] LAS accuracy: " << n_las_corr / n_total;
+      if (load_postag_model) {
+        _INFO << "[evaluate] postag accuracy: " << n_pos_corr / n_total;
+      }
+      if (load_parse_model) {
+        _INFO << "[evaluate] UAS accuracy: " << n_uas_corr / n_total;
+        _INFO << "[evaluate] LAS accuracy: " << n_las_corr / n_total;
+      }
     }
   }
   return 0;
