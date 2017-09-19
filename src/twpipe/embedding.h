@@ -12,8 +12,10 @@ namespace twpipe {
 
 struct WordEmbedding {
 protected:
+  enum NORMALIZER_TYPE { kNone, kGlove };
   static WordEmbedding * instance;
   std::unordered_map<std::string, std::vector<float>> pretrained;
+  NORMALIZER_TYPE normalizer_type;
   unsigned dim_;
 
   WordEmbedding();

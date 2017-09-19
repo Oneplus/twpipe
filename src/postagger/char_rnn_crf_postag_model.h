@@ -22,8 +22,8 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
   SymbolEmbedding pos_embed;
   SymbolEmbedding tran_embed;
   InputLayer embed_input;
-  Merge3Layer merge;
-  DenseLayer dense;
+  DenseLayer dense1;
+  DenseLayer dense2;
 
   unsigned char_size;
   unsigned char_dim;
@@ -51,8 +51,8 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
     tran_embed(model, AlphabetCollection::get()->pos_map.size() * AlphabetCollection::get()->pos_map.size(), 1),
     embed_input(embed_dim),
-    merge(model, word_hidden_dim, word_hidden_dim, pos_dim, word_hidden_dim),
-    dense(model, word_hidden_dim, 1),
+    dense1(model, word_hidden_dim + word_hidden_dim + pos_dim, word_hidden_dim),
+    dense2(model, word_hidden_dim, 1),
     char_size(char_size),
     char_dim(char_dim),
     char_hidden_dim(char_hidden_dim),
@@ -80,21 +80,18 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     pos_embed.new_graph(cg);
     tran_embed.new_graph(cg);
     embed_input.new_graph(cg);
-    merge.new_graph(cg);
-    dense.new_graph(cg);
+    dense1.new_graph(cg);
+    dense2.new_graph(cg);
   }
 
-  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
+  void initialize(const std::vector<std::string> & words) {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
-    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     std::vector<std::vector<float>> embeddings;
     WordEmbedding::get()->render(words, embeddings);
 
     unsigned n_words = words.size();
-    std::vector<std::vector<float>> emit_matrix(n_words, std::vector<float>(pos_size));
-    std::vector<std::vector<float>> tran_matrix(pos_size, std::vector<float>(pos_size));
-    std::vector<dynet::Expression> word_exprs(n_words);
+    std::vector<dynet::Expression> word_reprs(n_words);
 
     for (unsigned i = 0; i < n_words; ++i) {
       std::string word = words[i];
@@ -114,26 +111,43 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
       }
       char_rnn.add_inputs(char_exprs);
       auto payload = char_rnn.get_final();
-      word_exprs[i] = dynet::concatenate({ payload.first, payload.second, embed_input.get_output(embeddings[i]) });
+      word_reprs[i] = dynet::concatenate({ payload.first, payload.second, embed_input.get_output(embeddings[i]) });
     }
-    word_rnn.add_inputs(word_exprs);
 
-    std::vector<dynet::Expression> uni_labels(pos_size);
+    word_rnn.add_inputs(word_reprs);
+  }
+
+  dynet::Expression get_emit_score(dynet::Expression & word_repr) override {
+    dynet::Expression logits = dense2.get_output(dynet::rectify(dense1.get_output(word_repr)));
+    return logits;
+  }
+
+  dynet::Expression get_feature(unsigned i, unsigned prev_tag) override {
+    auto payload = word_rnn.get_output(i);
+    dynet::Expression feature = dynet::concatenate({ payload.first, payload.second, pos_embed.embed(prev_tag) });
+    return feature;
+  }
+
+  void decode(const std::vector<std::string> & words, std::vector<std::string> & tags) override {
+    Alphabet & pos_map = AlphabetCollection::get()->pos_map;
+
+    unsigned n_words = words.size();
+    initialize(words);
+    std::vector<dynet::Expression> losses(n_words);
+    std::vector<std::vector<float>> emit_matrix(n_words, std::vector<float>(pos_size));
+    std::vector<std::vector<float>> tran_matrix(pos_size, std::vector<float>(pos_size));
     for (unsigned t = 0; t < pos_size; ++t) {
-      uni_labels[t] = pos_embed.embed(t);
       for (unsigned pt = 0; pt < pos_size; ++pt) {
-        tran_matrix[pt][t] = dynet::as_scalar(
-          char_embed.cg->get_value(tran_embed.embed(pt * pos_size + t))
-        );
+        dynet::Expression tran_score = tran_embed.embed(pt * pos_size + t);
+        tran_matrix[pt][t] = dynet::as_scalar(tran_score.value());
       }
     }
 
     for (unsigned i = 0; i < n_words; ++i) {
-      auto payload = word_rnn.get_output(i);
       for (unsigned t = 0; t < pos_size; ++t) {
-        emit_matrix[i][t] = dynet::as_scalar(char_embed.cg->get_value(
-          dense.get_output(dynet::rectify(merge.get_output(payload.first, payload.second, pos_embed.embed(t))))
-        ));
+        dynet::Expression feature = get_feature(i, t);
+        dynet::Expression emit_score = get_emit_score(feature);
+        emit_matrix[i][t] = dynet::as_scalar(emit_score.value());
       }
     }
 
@@ -143,7 +157,7 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     for (unsigned i = 0; i < n_words; ++i) {
       for (unsigned t = 0; t < pos_size; ++t) {
         if (i == 0) {
-          alpha[i][t] = emit_matrix[i][t];
+          alpha[i][t] = emit_matrix[i][t] + tran_matrix[root_pos_id][t];
           path[i][t] = root_pos_id;
           continue;
         }
@@ -173,42 +187,19 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
 
   dynet::Expression objective(const Instance & inst) override {
     // embeddings counting w/o pseudo root.
-    std::vector<std::vector<float>> embeddings;
-    std::vector<std::string> words;
-    for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-      words.push_back(inst.input_units[i].word);
-    }
-    WordEmbedding::get()->render(words, embeddings);
-
-    const InputUnits & input_units = inst.input_units;
-    unsigned n_words_w_root = input_units.size();
-    unsigned n_words = n_words_w_root - 1;
-    BOOST_ASSERT_MSG(n_words == embeddings.size(), "[postag|model] number of dimension not equal.");
-
-    std::vector<dynet::Expression> word_exprs(n_words);
+    unsigned n_words = inst.input_units.size() - 1;
+    std::vector<std::string> words(n_words);
     std::vector<unsigned> labels(n_words);
-
-    for (unsigned i = 1; i < n_words_w_root; ++i) {
-      unsigned n_chars = input_units[i].cids.size();
-      std::vector<dynet::Expression> char_exprs(n_chars);
-      for (unsigned j = 0; j < n_chars; ++j) {
-        char_exprs[j] = char_embed.embed(input_units[i].cids[j]);
-      }
-      char_rnn.add_inputs(char_exprs);
-      auto payload = char_rnn.get_final();
-      word_exprs[i - 1] = dynet::concatenate({ payload.first, payload.second, embed_input.get_output(embeddings[i - 1]) });
-      labels[i - 1] = input_units[i].pid;
+    for (unsigned i = 1; i < inst.input_units.size(); ++i) {
+      words[i - 1] = inst.input_units[i].word;
+      labels[i - 1] = inst.input_units[i].pid;
     }
-
-    word_rnn.add_inputs(word_exprs);
-    std::vector<BiRNNOutput> payloads;
-    word_rnn.get_outputs(payloads);
+    initialize(words);
+    std::vector<dynet::Expression> losses(n_words);
 
     std::vector<ExpressionRow> emit_matrix(n_words, ExpressionRow(pos_size));
     std::vector<ExpressionRow> tran_matrix(pos_size, ExpressionRow(pos_size));
-    std::vector<dynet::Expression> uni_labels(pos_size);
     for (unsigned t = 0; t < pos_size; ++t) {
-      uni_labels[t] = pos_embed.embed(t);
       for (unsigned pt = 0; pt < pos_size; ++pt) {
         tran_matrix[pt][t] = tran_embed.embed(pt * pos_size + t);
       }
@@ -216,9 +207,8 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
 
     for (unsigned i = 0; i < n_words; ++i) {
       for (unsigned t = 0; t < pos_size; ++t) {
-        emit_matrix[i][t] = dense.get_output(
-          dynet::rectify(merge.get_output(payloads[i].first, payloads[i].second, uni_labels[t]))
-        );
+        dynet::Expression feature = get_feature(i, t);
+        emit_matrix[i][t] = get_emit_score(feature);
       }
     }
 
@@ -229,9 +219,9 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
       for (unsigned t = 0; t < pos_size; ++t) {
         std::vector<dynet::Expression> f;
         if (i == 0) {
-          f.push_back(emit_matrix[i][t]);
+          f.push_back(emit_matrix[i][t] + tran_matrix[root_pos_id][t]);
           if (t == labels[i]) {
-            path[i] = emit_matrix[i][t];
+            path[i] = emit_matrix[i][t] + tran_matrix[root_pos_id][t];
           }
         } else {
           for (unsigned pt = 0; pt < pos_size; ++pt) {
