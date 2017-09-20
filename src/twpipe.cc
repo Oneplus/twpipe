@@ -327,7 +327,7 @@ int main(int argc, char* argv[]) {
           std::cout << "\n";
 
           tokens.clear();
-          if (load_postag_model) {
+          if (load_postag_model || load_parse_model) {
             postags.clear(); gold_postags.clear();
           }
           if (load_parse_model) {
@@ -340,7 +340,7 @@ int main(int argc, char* argv[]) {
           std::vector<std::string> data;
           boost::algorithm::split(data, buffer, boost::is_any_of("\t "));
           tokens.push_back(data[1]);
-          if (load_postag_model) {
+          if (load_postag_model || load_parse_model) {
             gold_postags.push_back(data[3]);
           }
           if (load_parse_model) {
