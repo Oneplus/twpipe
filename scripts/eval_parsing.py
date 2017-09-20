@@ -17,11 +17,12 @@ def main():
         lines = data.splitlines()
         body = [line for line in lines if not line.startswith('#')]
         words = [line.split()[1] for line in body]
+        gold_postags = [line.split()[3] for line in body]
         heads = [line.split()[6] for line in body]
         deprels = [line.split()[7] for line in body]
 
         key = ''.join(words)
-        answers[key] = {"data": data, "heads": heads, "deprels": deprels}
+        answers[key] = {"data": data, "gold_postags": gold_postags, "heads": heads, "deprels": deprels}
 
     n, n_uas, n_las = 0, 0, 0
     for data in open(args.system, 'r').read().strip().split('\n\n'):
@@ -39,7 +40,10 @@ def main():
         answer = answers[key]
         gold_heads = answer["heads"]
         gold_deprels = answer['deprels']
+        gold_postags = answers["gold_postags"]
         for i in range(len(words)):
+            if args.exclude_punct and gold_postags[i] in ('PUCNT', ".", ",", ":", "''", "``"):
+                continue
             if gold_heads[i] == heads[i]:
                 n_uas += 1
                 if gold_deprels[i] == deprels[i]:
