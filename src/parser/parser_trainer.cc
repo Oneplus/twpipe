@@ -29,7 +29,7 @@ ParserTrainer::ParserTrainer(ParseModel & engine,
 }
 
 float ParserTrainer::evaluate(Corpus & corpus) {
-  float n_recall = 0., n_total = 0.;
+  float n_recall = 0.f, n_total = 0.f;
   for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
     const Instance & inst = corpus.devel_data.at(sid);
 
@@ -115,7 +115,6 @@ void SupervisedTrainer::train(Corpus& corpus) {
   Noisifier noisifier(corpus, noisify_method_name, singleton_dropout_prob);
   
   dynet::Trainer* trainer = opt_builder.build(engine.model);
-  float eta0 = trainer->learning_rate;
   // unsigned kUNK = AlphabetCollection::get()->word_map.get(Corpus::UNK);
 
   float llh = 0.f;
@@ -156,7 +155,7 @@ void SupervisedTrainer::train(Corpus& corpus) {
       _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
       Model::get()->to_json(Model::kParserName, engine.model);
     }
-    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+    opt_builder.update(trainer, iter);
   }
 
   delete trainer;
@@ -230,7 +229,7 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
       sys.get_transition_costs(state, valid_actions, ref_heads, ref_deprels, costs);
       float gold_action_cost = (*std::max_element(costs.begin(), costs.end()));
       float action_cost = 0.f;
-      float best_gold_action_score = -1e10, worst_gold_action_score = 1e10, best_non_gold_action_score = -1e10;
+      float best_gold_action_score = -1e10f, worst_gold_action_score = 1e10f, best_non_gold_action_score = -1e10f;
       for (unsigned i = 0; i < valid_actions.size(); ++i) {
         unsigned act = valid_actions[i];
         float s = scores[act];
@@ -251,7 +250,7 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
       best_gold_action = gold_actions[n_actions];
       action = gold_actions[n_actions];
       if (objective_type == kRank || objective_type == kBipartieRank) {
-        float best_non_gold_action_score = -1e10;
+        float best_non_gold_action_score = -1e10f;
         for (unsigned i = 0; i < valid_actions.size(); ++i) {
           unsigned act = valid_actions[i];
           if (act != best_gold_action && (scores[act] > best_non_gold_action_score)) {
@@ -272,9 +271,9 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
     n_actions++;
   }
   engine.destropy_checkpoint(checkpoint);
-  float ret = 0.;
-  if (loss.size() > 0) {
-    dynet::Expression l = dynet::sum(loss);
+  float ret = 0.f;
+  if (!loss.empty()) {
+    dynet::Expression l = dynet::sum(loss) + lambda_ * engine.l2() * loss.size();
     ret = dynet::as_scalar(cg.forward(l));
     cg.backward(l);
     trainer->update();
@@ -431,7 +430,6 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
 
   dynet::ParameterCollection & model = engine.model;
   dynet::Trainer * trainer = opt_builder.build(model);
-  float eta0 = trainer->learning_rate;
 
   std::vector<unsigned> order;
   bool allow_nonprojective = engine.sys.allow_nonprojective();
@@ -467,7 +465,7 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
       _INFO << "[parse|ensemble|train] new best record achieved: " << best_las << ", saved.";
       Model::get()->to_json(Model::kParserName, engine.model);
     }
-    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+    opt_builder.update(trainer, iter);
   }
 }
 
@@ -511,9 +509,9 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
   }
 
   engine.destropy_checkpoint(checkpoint);
-  float ret = 0.;
+  float ret = 0.f;
   if (!loss.empty()) {
-    dynet::Expression l = -dynet::sum(loss);
+    dynet::Expression l = -dynet::sum(loss) + lambda_ * engine.l2() * loss.size();
     ret = dynet::as_scalar(cg.forward(l));
     cg.backward(l);
     trainer->update();

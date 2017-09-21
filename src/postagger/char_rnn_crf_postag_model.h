@@ -84,7 +84,7 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     dense2.new_graph(cg);
   }
 
-  void initialize(const std::vector<std::string> & words) {
+  void initialize(const std::vector<std::string> & words) override {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
 
     std::vector<std::vector<float>> embeddings;
@@ -241,6 +241,11 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
     }
     return dynet::logsumexp(f) - path.back();
   }
+
+  dynet::Expression l2() override {
+    return dynet::zeroes(*dense1.W.pg, {0});
+  }
+
 };
 
 typedef CharacterRNNCRFPostagModel<dynet::GRUBuilder> CharacterGRUCRFPostagModel;

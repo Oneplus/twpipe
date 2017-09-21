@@ -288,16 +288,16 @@ dynet::Expression Dyer15Model::get_scores(ParseModel::StateCheckpoint * checkpoi
 
 dynet::Expression Dyer15Model::l2() {
   std::vector<dynet::Expression> ret;
-  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
-  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
-  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(e); } }
-  for (auto & e : merge_input.get_params()) { ret.push_back(e); }
-  for (auto & e : merge.get_params()) { ret.push_back(e); }
-  for (auto & e : composer.get_params()) { ret.push_back(e); }
-  for (auto & e : scorer.get_params()) { ret.push_back(e); }
-  ret.push_back(buffer_guard);
-  ret.push_back(stack_guard);
-  ret.push_back(action_start);
+  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
+  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
+  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(dynet::l2_norm(e)); }
+  for (auto & e : merge.get_params()) { ret.push_back(dynet::l2_norm(e)); }
+  for (auto & e : composer.get_params()) { ret.push_back(dynet::l2_norm(e)); }
+  for (auto & e : scorer.get_params()) { ret.push_back(dynet::l2_norm(e)); }
+  ret.push_back(dynet::l2_norm(buffer_guard));
+  ret.push_back(dynet::l2_norm(stack_guard));
+  ret.push_back(dynet::l2_norm(action_start));
   return dynet::sum(ret);
 }
 

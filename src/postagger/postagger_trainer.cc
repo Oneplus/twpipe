@@ -110,7 +110,6 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
 
   dynet::ParameterCollection & model = engine.model;
   dynet::Trainer * trainer = opt_builder.build(model);
-  float eta0 = trainer->learning_rate;
 
   std::vector<unsigned> order;
   for (auto & payload : ensemble_instances) {
@@ -174,7 +173,7 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
       Model::get()->to_json(Model::kPostaggerName, engine.model);
     }
-    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+    opt_builder.update(trainer, iter);
   }
 }
 

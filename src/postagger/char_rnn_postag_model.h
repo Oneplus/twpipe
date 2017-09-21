@@ -164,6 +164,10 @@ struct CharacterRNNPostagModel : public PostagModel {
 
     return dynet::sum(losses);
   }
+
+  dynet::Expression l2() override {
+    return dynet::zeroes(*dense1.W.pg, {0});
+  }
 };
 
 typedef CharacterRNNPostagModel<dynet::GRUBuilder> CharacterGRUPostagModel;

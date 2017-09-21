@@ -32,6 +32,8 @@ struct OptimizerBuilder {
   OptimizerBuilder(const po::variables_map& conf);
 
   dynet::Trainer * build(dynet::ParameterCollection & model);
+
+  void update(dynet::Trainer * trainer, unsigned iter);
 };
 
 }

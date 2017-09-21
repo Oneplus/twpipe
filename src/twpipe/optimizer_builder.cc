@@ -20,6 +20,10 @@ po::options_description twpipe::OptimizerBuilder::get_options() {
 
 twpipe::OptimizerBuilder::OptimizerBuilder(const po::variables_map & conf) : enable_clipping(false) {
   eta0 = 0.1f;
+  if (conf.count("optimizer-eta0")) {
+    eta0 = conf["optimizer-eta0"].as<float>();
+  }
+
   if (!conf.count("optimizer") || conf["optimizer"].as<std::string>() == "simple_sgd") {
     optimizer_type = kSimpleSGD;
   } else if (conf["optimizer"].as<std::string>() == "momentum_sgd") {
@@ -40,6 +44,8 @@ twpipe::OptimizerBuilder::OptimizerBuilder(const po::variables_map & conf) : ena
     exit(1);
   }
   _INFO << "[optimizer] using " << conf["optimizer"].as<std::string>() << " optimizer";
+
+  enable_clipping = conf["optimizer-enable-clipping"].as<bool>();
 }
 
 dynet::Trainer* twpipe::OptimizerBuilder::build(dynet::ParameterCollection & model) {
@@ -54,8 +60,15 @@ dynet::Trainer* twpipe::OptimizerBuilder::build(dynet::ParameterCollection & mod
     ret = new dynet::AdadeltaTrainer(model, eta0);
   } else if (optimizer_type == kAdam) {
     ret = new dynet::AdamTrainer(model, eta0, adam_beta1, adam_beta2);
+  } else {
+    _ERROR << "[optimizer] internal errror.";
+    exit(1);
   }
 
   ret->clipping_enabled = enable_clipping;
   return ret;
+}
+
+void twpipe::OptimizerBuilder::update(dynet::Trainer *trainer, unsigned iter) {
+  trainer->learning_rate = eta0 / (1.f + static_cast<float>(iter) * .08f);
 }

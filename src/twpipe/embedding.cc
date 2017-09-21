@@ -32,16 +32,16 @@ void WordEmbedding::load(const std::string & embedding_file, unsigned dim) {
   size_t found = embedding_file.find("glove");
   normalizer_type = kNone;
   if (found != std::string::npos) { normalizer_type = kGlove; }
-  pretrained[Corpus::BAD0] = std::vector<float>(dim, 0.);
-  pretrained[Corpus::UNK] = std::vector<float>(dim, 0.);
-  pretrained[Corpus::ROOT] = std::vector<float>(dim, 0.);
+  pretrained[Corpus::BAD0] = std::vector<float>(dim, 0.f);
+  pretrained[Corpus::UNK] = std::vector<float>(dim, 0.f);
+  pretrained[Corpus::ROOT] = std::vector<float>(dim, 0.f);
   _INFO << "[embedding] loading from " << embedding_file << " with " << dim << " dimensions.";
   std::ifstream ifs(embedding_file);
   BOOST_ASSERT_MSG(ifs, "Failed to load embedding file.");
   std::string line;
   // get the header in word2vec styled embedding.
   std::getline(ifs, line);
-  std::vector<float> v(dim, 0.);
+  std::vector<float> v(dim, 0.f);
   std::string word;
   while (std::getline(ifs, line)) {
     std::istringstream iss(line);
@@ -59,9 +59,9 @@ void WordEmbedding::load(const std::string & embedding_file, unsigned dim) {
 void WordEmbedding::empty(unsigned dim) {
   dim_ = dim;
   normalizer_type = kNone;
-  pretrained[Corpus::BAD0] = std::vector<float>(dim, 0.);
-  pretrained[Corpus::UNK] = std::vector<float>(dim, 0.);
-  pretrained[Corpus::ROOT] = std::vector<float>(dim, 0.);
+  pretrained[Corpus::BAD0] = std::vector<float>(dim, 0.f);
+  pretrained[Corpus::UNK] = std::vector<float>(dim, 0.f);
+  pretrained[Corpus::ROOT] = std::vector<float>(dim, 0.f);
   _INFO << "[embedding] loaded embedding " << pretrained.size() << " entries.";
 }
 
@@ -75,7 +75,7 @@ void WordEmbedding::render(const std::vector<std::string>& words,
     }
     auto it = pretrained.find(normalized_word);
     values.push_back(it == pretrained.end() ?
-                     std::vector<float>(dim_, 0.) :
+                     std::vector<float>(dim_, 0.f) :
                      it->second);
   }
 }

@@ -14,15 +14,19 @@ po::options_description Trainer::get_options() {
     ("train-distill-postagger", po::value<bool>()->default_value(false), "train distilling parser.")
     ("train-parser", po::value<bool>()->default_value(false), "use to specify training the parser.")
     ("train-distill-parser", po::value<bool>()->default_value(false), "train distilling parser.")
+    ("lambda", po::value<float>()->default_value(0.f), "the tense of l2")
     ("max-iter", po::value<unsigned>()->default_value(100), "the maximum number of training.")
-    ("early-stop", po::value<bool>()->default_value(false), "perform early stopping.")
+    ("evaluate-stops", po::value<unsigned>()->default_value(0), "perform early stopping.")
+    ("evaluate-skips", po::value<unsigned>()->default_value(0), "skip the first n evaluation.")
     ;
   return training_opts;
 }
 
 Trainer::Trainer(const po::variables_map & conf) {
   max_iter = conf["max-iter"].as<unsigned>();
-  early_stop = conf["early-stop"].as<bool>();
+  evaluate_stops = conf["evaluate-stops"].as<unsigned>();
+  evaluate_skips = conf["evaluate-skips"].as<unsigned>();
+  lambda_ = conf["lambda"].as<float>();
 }
 
 }

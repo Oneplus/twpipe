@@ -30,6 +30,8 @@ struct PostagModel {
   
   virtual dynet::Expression objective(const Instance & inst) = 0;
 
+  virtual dynet::Expression l2() = 0;
+
   void postag(const std::vector<std::string> & words);
 
   void postag(const std::vector<std::string> & words,
