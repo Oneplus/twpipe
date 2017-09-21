@@ -34,7 +34,7 @@ bool Trainer::need_evaluate(unsigned iter) {
 }
 
 bool Trainer::need_evaluate(unsigned iter, unsigned n_trained) {
-  return ((iter > evaluate_skips) && (n_trained % evaluate_stops == 0));
+  return ((iter > evaluate_skips) && evaluate_stops > 0 && (n_trained % evaluate_stops == 0));
 }
 
 }
