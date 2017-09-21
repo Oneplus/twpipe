@@ -115,11 +115,10 @@ void SupervisedTrainer::train(Corpus& corpus) {
   Noisifier noisifier(corpus, noisify_method_name, singleton_dropout_prob);
   
   dynet::Trainer* trainer = opt_builder.build(engine.model);
-  // unsigned kUNK = AlphabetCollection::get()->word_map.get(Corpus::UNK);
 
   float llh = 0.f;
-  float llh_in_batch = 0.f;
   float best_las = -1.f;
+  unsigned n_processed = 0;
 
   std::vector<unsigned> order;
   get_orders(corpus, order, allow_nonprojective);
@@ -144,16 +143,29 @@ void SupervisedTrainer::train(Corpus& corpus) {
         lp = train_full_tree(input_units, parse_units, trainer, iter);
       }
       llh += lp;
-      llh_in_batch += lp;
       noisifier.denoisify(input_units);
+      
+      n_processed++;
+      if (need_evaluate(iter, n_processed)) {
+        float las = evaluate(corpus);
+        _INFO << "[parse|train] " << static_cast<float>(n_processed) / order.size()
+          << "% trained, LAS on heldout = " << las;
+        if (las > best_las) {
+          best_las = las;
+          _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+          Model::get()->to_json(Model::kParserName, engine.model);
+        }
+      }
     }
-
-    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh; 
-    float las = evaluate(corpus);
-    if (las > best_las) {
-      best_las = las;
-      _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
-      Model::get()->to_json(Model::kParserName, engine.model);
+    
+    _INFO << "[parse|train] end of iter #" << iter << " loss " << llh;
+    if (need_evaluate(iter)) {
+      float las = evaluate(corpus);
+      if (las > best_las) {
+        best_las = las;
+        _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+        Model::get()->to_json(Model::kParserName, engine.model);
+      }
     }
     opt_builder.update(trainer, iter);
   }
@@ -440,8 +452,8 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
   }
 
   float llh = 0.f;
-  float llh_in_batch = 0.f;
   float best_las = -1.f;
+  unsigned n_processed = 0;
 
   _INFO << "[parse|ensemble|train] will stop after " << max_iter << " iterations.";
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
@@ -455,15 +467,29 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
       noisifier.noisify(units);
       float lp = train_full_tree(units, inst, trainer);
       llh += lp;
-      llh_in_batch += lp;
       noisifier.denoisify(units);
+    
+      n_processed++;
+      if (need_evaluate(iter, n_processed)) {
+        float las = evaluate(corpus);
+        _INFO << "[parse|ensemble|train] " << static_cast<float>(n_processed) / order.size()
+          << "% trained, LAS on heldout = " << las;
+        if (las > best_las) {
+          best_las = las;
+          _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+          Model::get()->to_json(Model::kParserName, engine.model);
+        }
+      }
     }
-    _INFO << "[parse|ensemble|train] end of iter #" << iter << " loss " << llh;
-    float las = evaluate(corpus);
-    if (las > best_las) {
-      best_las = las;
-      _INFO << "[parse|ensemble|train] new best record achieved: " << best_las << ", saved.";
-      Model::get()->to_json(Model::kParserName, engine.model);
+
+    _INFO << "[parse|ensemble|train] end of iter #" << iter << ", loss = " << llh;
+    if (need_evaluate(iter)) {
+      float las = evaluate(corpus);
+      if (las > best_las) {
+        best_las = las;
+        _INFO << "[parse|ensemble|train] new best record achieved: " << best_las << ", saved.";
+        Model::get()->to_json(Model::kParserName, engine.model);
+      }
     }
     opt_builder.update(trainer, iter);
   }

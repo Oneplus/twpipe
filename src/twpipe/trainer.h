@@ -18,7 +18,9 @@ struct Trainer {
   static po::options_description get_options();
 
   Trainer(const po::variables_map & conf);
-
+  
+  bool need_evaluate(unsigned iter);
+  
   bool need_evaluate(unsigned iter, unsigned n_trained);
 };
 

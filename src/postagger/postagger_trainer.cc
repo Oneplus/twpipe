@@ -28,36 +28,53 @@ void PostaggerTrainer::train(const Corpus & corpus) {
 
   float eta0 = trainer->learning_rate;
   float best_acc = 0.f;
+  unsigned n_processed = 0;
 
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
     std::shuffle(order.begin(), order.end(), *dynet::rndeng);
     _INFO << "[postag|train] start training at " << iter << "-th iteration.";
 
     float loss = 0.f;
-    for (unsigned sid = 0; sid < corpus.n_train; ++sid) {
-      const Instance & inst = corpus.training_data.at(order[sid]);
+    for (unsigned sid : order) {
+      const Instance & inst = corpus.training_data.at(sid);
 
       dynet::ComputationGraph cg;
       engine.new_graph(cg);
 
       dynet::Expression loss_expr = engine.objective(inst);
+      if (lambda_ > 0) {
+        loss_expr = loss_expr + lambda_ * engine.l2();
+      }
       float l = dynet::as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
       loss += l;
 
       trainer->update();
+      n_processed++;
+      if (need_evaluate(iter, n_processed)) {
+        float acc = evaluate(corpus);
+        if (acc > best_acc) {
+          _INFO << "[postag|train] " << static_cast<float>(n_processed) / order.size()
+            << "% trained, ACC on heldout = " << acc;
+          if (acc > best_acc) {
+            best_acc = acc;
+            _INFO << "[postag|train] new best record achieved: " << best_acc << ", saved.";
+            Model::get()->to_json(Model::kPostaggerName, engine.model);
+          }
+        }
+      }
     }
-    _INFO << "[postag|train] loss = " << loss;
-
-    float acc = evaluate(corpus);
-    _INFO << "[postag|train] iteration " << iter << ", accuracy = " << acc;
-
-    if (acc > best_acc) {
-      best_acc = acc;
-      _INFO << "[postag|train] new record achieved " << best_acc << ", model saved.";
-      Model::get()->to_json(Model::kPostaggerName, engine.model);
+    _INFO << "[postag|train] end of iter #" << iter << ", loss = " << loss;
+    if (need_evaluate(iter)) {
+      float acc = evaluate(corpus);
+      _INFO << "[postag|train] iteration " << iter << ", accuracy = " << acc;
+      if (acc > best_acc) {
+        best_acc = acc;
+        _INFO << "[postag|train] new record achieved: " << best_acc << ", saved.";
+        Model::get()->to_json(Model::kPostaggerName, engine.model);
+      }
     }
-    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+    opt_builder.update(trainer, iter);
   }
 
   _INFO << "[postag|train] training is done, best accuracy is: " << best_acc;
@@ -120,6 +137,7 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
 
   float llh = 0.f;
   float best_acc = -1.f;
+  unsigned n_processed = 0;
 
   _INFO << "[postag|ensemble|train] will stop after " << max_iter << " iterations.";
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
@@ -160,18 +178,36 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       }
       if (!loss.empty()) {
         dynet::Expression loss_expr = -dynet::sum(loss);
+        if (lambda_ > 0) {
+          loss_expr = loss_expr + lambda_ * engine.l2();
+        }
         float l = dynet::as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
         trainer->update();
         llh += l;
+        n_processed++;
+        if (need_evaluate(iter, n_processed)) {
+          float acc = evaluate(corpus);
+          if (acc > best_acc) {
+            _INFO << "[postag|ensemble|train] " << static_cast<float>(n_processed) / order.size()
+              << "% trained, ACC on heldout = " << acc;
+            if (acc > best_acc) {
+              best_acc = acc;
+              _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
+              Model::get()->to_json(Model::kPostaggerName, engine.model);
+            }
+          }
+        }
       }
     }
     _INFO << "[postag|ensemble|train] end of iter #" << iter << " loss " << llh;
-    float acc = evaluate(corpus);
-    if (acc > best_acc) {
-      best_acc = acc;
-      _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
-      Model::get()->to_json(Model::kPostaggerName, engine.model);
+    if (need_evaluate(iter)) {
+      float acc = evaluate(corpus);
+      if (acc > best_acc) {
+        best_acc = acc;
+        _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
+        Model::get()->to_json(Model::kPostaggerName, engine.model);
+      }
     }
     opt_builder.update(trainer, iter);
   }
