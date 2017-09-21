@@ -148,12 +148,14 @@ void SupervisedTrainer::train(Corpus& corpus) {
       n_processed++;
       if (need_evaluate(iter, n_processed)) {
         float las = evaluate(corpus);
-        _INFO << "[parse|train] " << static_cast<float>(n_processed) / order.size()
-          << "% trained, LAS on heldout = " << las;
+        float prop = static_cast<float>(n_processed) / order.size();
         if (las > best_las) {
+          _INFO << "[parse|train] " << prop << "% trained, LAS on heldout = " << las
+            << ", new best achieved, saved.";
           best_las = las;
-          _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
           Model::get()->to_json(Model::kParserName, engine.model);
+        } else {
+          _INFO << "[parse|train] " << prop << "% trained, LAS on heldout = " << las;
         }
       }
     }
@@ -163,8 +165,11 @@ void SupervisedTrainer::train(Corpus& corpus) {
       float las = evaluate(corpus);
       if (las > best_las) {
         best_las = las;
-        _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
+        _INFO << "[parse|train] end of iter #" << iter << ", LAS on heldout = " << las
+          << ", new best achieved, saved.";
         Model::get()->to_json(Model::kParserName, engine.model);
+      } else {
+        _INFO << "[parse|train] end of iter #" << iter << ", LAS on heldout = " << las;
       }
     }
     opt_builder.update(trainer, iter);
@@ -472,12 +477,14 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
       n_processed++;
       if (need_evaluate(iter, n_processed)) {
         float las = evaluate(corpus);
-        _INFO << "[parse|ensemble|train] " << static_cast<float>(n_processed) / order.size()
-          << "% trained, LAS on heldout = " << las;
+        float prop = static_cast<float>(n_processed) / order.size();
         if (las > best_las) {
+          _INFO << "[parse|train] " << prop << "% trained, LAS on heldout = " << las
+            << ", new best achieved, saved.";
           best_las = las;
-          _INFO << "[parse|train] new best record achieved: " << best_las << ", saved.";
           Model::get()->to_json(Model::kParserName, engine.model);
+        } else {
+          _INFO << "[parse|train] " << prop << "% trained, LAS on heldout = " << las;
         }
       }
     }
@@ -487,8 +494,11 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
       float las = evaluate(corpus);
       if (las > best_las) {
         best_las = las;
-        _INFO << "[parse|ensemble|train] new best record achieved: " << best_las << ", saved.";
+        _INFO << "[parse|train] end of iter #" << iter << ", LAS on heldout = " << las
+          << ", new best achieved, saved.";
         Model::get()->to_json(Model::kParserName, engine.model);
+      } else {
+        _INFO << "[parse|train] end of iter #" << iter << ", LAS on heldout = " << las;
       }
     }
     opt_builder.update(trainer, iter);

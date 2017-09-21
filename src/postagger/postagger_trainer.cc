@@ -25,8 +25,6 @@ void PostaggerTrainer::train(const Corpus & corpus) {
   _INFO << "[postag|train] going to train " << max_iter << " iterations";
 
   dynet::Trainer * trainer = opt_builder.build(engine.model);
-
-  float eta0 = trainer->learning_rate;
   float best_acc = 0.f;
   unsigned n_processed = 0;
 
@@ -38,28 +36,28 @@ void PostaggerTrainer::train(const Corpus & corpus) {
     for (unsigned sid : order) {
       const Instance & inst = corpus.training_data.at(sid);
 
-      dynet::ComputationGraph cg;
-      engine.new_graph(cg);
-
-      dynet::Expression loss_expr = engine.objective(inst);
-      if (lambda_ > 0) {
-        loss_expr = loss_expr + lambda_ * engine.l2();
+      {
+        dynet::ComputationGraph cg;
+        engine.new_graph(cg);
+        dynet::Expression loss_expr = engine.objective(inst);
+        if (lambda_ > 0) { loss_expr = loss_expr + lambda_ * engine.l2(); }
+        float l = dynet::as_scalar(cg.forward(loss_expr));
+        cg.backward(loss_expr);
+        loss += l;
+        trainer->update();
+        n_processed++;
       }
-      float l = dynet::as_scalar(cg.forward(loss_expr));
-      cg.backward(loss_expr);
-      loss += l;
-
-      trainer->update();
-      n_processed++;
       if (need_evaluate(iter, n_processed)) {
         float acc = evaluate(corpus);
         if (acc > best_acc) {
-          _INFO << "[postag|train] " << static_cast<float>(n_processed) / order.size()
-            << "% trained, ACC on heldout = " << acc;
+          float prop = static_cast<float>(n_processed) / order.size();
           if (acc > best_acc) {
+            _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc 
+              << ", new best achieved, saved.";
             best_acc = acc;
-            _INFO << "[postag|train] new best record achieved: " << best_acc << ", saved.";
             Model::get()->to_json(Model::kPostaggerName, engine.model);
+          } else {
+            _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc;
           }
         }
       }
@@ -67,11 +65,13 @@ void PostaggerTrainer::train(const Corpus & corpus) {
     _INFO << "[postag|train] end of iter #" << iter << ", loss = " << loss;
     if (need_evaluate(iter)) {
       float acc = evaluate(corpus);
-      _INFO << "[postag|train] iteration " << iter << ", accuracy = " << acc;
       if (acc > best_acc) {
         best_acc = acc;
-        _INFO << "[postag|train] new record achieved: " << best_acc << ", saved.";
+        _INFO << "[postag|train] end of iter #" << iter << ", ACC on heldout = " << acc
+          << ", new best achieved, saved.";
         Model::get()->to_json(Model::kPostaggerName, engine.model);
+      } else {
+        _INFO << "[postag|train] end of iter #" << iter << ", ACC on heldout = " << acc;
       }
     }
     opt_builder.update(trainer, iter);
@@ -148,55 +148,55 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       InputUnits & units = corpus.training_data.at(sid).input_units;
       const EnsembleInstance & inst = ensemble_instances.at(sid);
 
-      dynet::ComputationGraph cg;
-      engine.new_graph(cg);
+      {
+        dynet::ComputationGraph cg;
+        engine.new_graph(cg);
 
-      unsigned n_words = units.size() - 1;
-      std::vector<std::string> words(n_words);
-      for (unsigned i = 1; i < units.size(); ++i) {
-        words[i - 1] = units[i].word;
-      }
-
-      engine.initialize(words);
-      unsigned prev_label = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
-
-      std::vector<dynet::Expression> loss;
-      const std::vector<unsigned> & actions = inst.categories;
-      const std::vector<std::vector<float>> & probs = inst.probs;
-
-      unsigned n_pos = probs.at(0).size();
-      for (unsigned i = 0; i < n_words; ++i) {
-        dynet::Expression feature = engine.get_feature(i, prev_label);
-        dynet::Expression logits = engine.get_emit_score(feature);
-        const std::vector<float> & prob = probs.at(i);
-
-        loss.push_back(dynet::dot_product(
-          dynet::input(cg, { n_pos }, prob),
-          dynet::log_softmax(logits)
-        ));
-        prev_label = actions.at(i);
-      }
-      if (!loss.empty()) {
-        dynet::Expression loss_expr = -dynet::sum(loss);
-        if (lambda_ > 0) {
-          loss_expr = loss_expr + lambda_ * engine.l2();
+        unsigned n_words = units.size() - 1;
+        std::vector<std::string> words(n_words);
+        for (unsigned i = 1; i < units.size(); ++i) {
+          words[i - 1] = units[i].word;
         }
-        float l = dynet::as_scalar(cg.forward(loss_expr));
-        cg.backward(loss_expr);
-        trainer->update();
-        llh += l;
-        n_processed++;
-        if (need_evaluate(iter, n_processed)) {
-          float acc = evaluate(corpus);
-          if (acc > best_acc) {
-            _INFO << "[postag|ensemble|train] " << static_cast<float>(n_processed) / order.size()
-              << "% trained, ACC on heldout = " << acc;
-            if (acc > best_acc) {
-              best_acc = acc;
-              _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
-              Model::get()->to_json(Model::kPostaggerName, engine.model);
-            }
-          }
+        engine.initialize(words);
+        unsigned prev_label = AlphabetCollection::get()->pos_map.get(Corpus::ROOT);
+
+        std::vector<dynet::Expression> loss;
+        const std::vector<unsigned> & actions = inst.categories;
+        const std::vector<std::vector<float>> & probs = inst.probs;
+
+        unsigned n_pos = probs.at(0).size();
+        for (unsigned i = 0; i < n_words; ++i) {
+          dynet::Expression feature = engine.get_feature(i, prev_label);
+          dynet::Expression logits = engine.get_emit_score(feature);
+          const std::vector<float> & prob = probs.at(i);
+
+          loss.push_back(dynet::dot_product(
+            dynet::input(cg, { n_pos }, prob),
+            dynet::log_softmax(logits)
+          ));
+          prev_label = actions.at(i);
+        }
+        if (!loss.empty()) {
+          dynet::Expression loss_expr = -dynet::sum(loss);
+          if (lambda_ > 0) { loss_expr = loss_expr + lambda_ * engine.l2(); }
+          float l = dynet::as_scalar(cg.forward(loss_expr));
+          cg.backward(loss_expr);
+          trainer->update();
+          llh += l;
+          n_processed++;
+        }
+      }
+
+      if (need_evaluate(iter, n_processed)) {
+        float acc = evaluate(corpus);
+        float prop = static_cast<float>(n_processed) / order.size();
+        if (acc > best_acc) {
+          _INFO << "[postag|ensemble|train] " << prop << "% trained, ACC on heldout = " << acc
+            << ", new best achieved, saved.";
+          best_acc = acc;
+          Model::get()->to_json(Model::kPostaggerName, engine.model);
+        } else {
+          _INFO << "[postag|ensemble|train] " << prop << "% trained, ACC on heldout = " << acc;
         }
       }
     }
@@ -205,8 +205,11 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
       float acc = evaluate(corpus);
       if (acc > best_acc) {
         best_acc = acc;
-        _INFO << "[postag|ensemble|train] new best record achieved: " << best_acc << ", saved.";
+        _INFO << "[postag|train] end of iter #" << iter << ", ACC on heldout = " << acc <<
+          ", new best achieved, saved.";
         Model::get()->to_json(Model::kPostaggerName, engine.model);
+      } else {
+        _INFO << "[postag|train] end of iter #" << iter << ", ACC on heldout = " << acc;
       }
     }
     opt_builder.update(trainer, iter);
