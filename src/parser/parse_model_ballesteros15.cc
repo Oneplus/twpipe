@@ -276,21 +276,21 @@ dynet::Expression Ballesteros15Model::get_scores(ParseModel::StateCheckpoint * c
 
 dynet::Expression Ballesteros15Model::l2() {
   std::vector<dynet::Expression> ret;
-  for (auto & layer : fwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & layer : bwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & e : merge_input.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  for (auto & e : merge.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  for (auto & e : composer.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  for (auto & e : scorer.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  ret.push_back(dynet::l2_norm(buffer_guard));
-  ret.push_back(dynet::l2_norm(stack_guard));
-  ret.push_back(dynet::l2_norm(action_start));
-  ret.push_back(dynet::l2_norm(word_start_guard));
-  ret.push_back(dynet::l2_norm(word_end_guard));
-  ret.push_back(dynet::l2_norm(root_word));
+  for (auto & layer : fwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & layer : bwd_ch_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & layer : s_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & layer : q_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & layer : a_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  for (auto & e : merge.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  for (auto & e : composer.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  for (auto & e : scorer.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  ret.push_back(dynet::squared_norm(buffer_guard));
+  ret.push_back(dynet::squared_norm(stack_guard));
+  ret.push_back(dynet::squared_norm(action_start));
+  ret.push_back(dynet::squared_norm(word_start_guard));
+  ret.push_back(dynet::squared_norm(word_end_guard));
+  ret.push_back(dynet::squared_norm(root_word));
   return dynet::sum(ret);
 }
 

@@ -40,7 +40,9 @@ void PostaggerTrainer::train(const Corpus & corpus) {
         dynet::ComputationGraph cg;
         engine.new_graph(cg);
         dynet::Expression loss_expr = engine.objective(inst);
-        if (lambda_ > 0) { loss_expr = loss_expr + lambda_ * engine.l2(); }
+        if (lambda_ > 0) {
+          loss_expr = loss_expr + (0.5f * lambda_ * inst.input_units.size()) * engine.l2();
+        }
         float l = dynet::as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
         loss += l;
@@ -178,7 +180,9 @@ void PostaggerEnsembleTrainer::train(Corpus & corpus,
         }
         if (!loss.empty()) {
           dynet::Expression loss_expr = -dynet::sum(loss);
-          if (lambda_ > 0) { loss_expr = loss_expr + lambda_ * engine.l2(); }
+          if (lambda_ > 0) {
+            loss_expr = loss_expr + (0.5f * lambda_ * units.size()) * engine.l2();
+          }
           float l = dynet::as_scalar(cg.forward(loss_expr));
           cg.backward(loss_expr);
           trainer->update();

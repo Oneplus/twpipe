@@ -243,7 +243,12 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
   }
 
   dynet::Expression l2() override {
-    return dynet::zeroes(*dense1.W.pg, {0});
+    std::vector<dynet::Expression> ret;
+    for (auto & e : char_rnn.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+    for (auto & e : word_rnn.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+    for (auto & e : dense1.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+    for (auto & e : dense2.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+    return dynet::sum(ret);
   }
 
 };

@@ -196,14 +196,14 @@ dynet::Expression Kiperwasser16Model::get_scores(ParseModel::StateCheckpoint * c
 
 dynet::Expression Kiperwasser16Model::l2() {
   std::vector<dynet::Expression> ret;
-  for (auto & layer : fwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & layer : bwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::l2_norm(e)); } }
-  for (auto & e : merge_input.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  for (auto & e : merge.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  for (auto & e : scorer.get_params()) { ret.push_back(dynet::l2_norm(e)); }
-  ret.push_back(dynet::l2_norm(empty));
-  ret.push_back(dynet::l2_norm(fwd_guard));
-  ret.push_back(dynet::l2_norm(bwd_guard));
+  for (auto & layer : fwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & layer : bwd_lstm.param_vars) { for (auto & e : layer) { ret.push_back(dynet::squared_norm(e)); } }
+  for (auto & e : merge_input.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  for (auto & e : merge.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  for (auto & e : scorer.get_params()) { ret.push_back(dynet::squared_norm(e)); }
+  ret.push_back(dynet::squared_norm(empty));
+  ret.push_back(dynet::squared_norm(fwd_guard));
+  ret.push_back(dynet::squared_norm(bwd_guard));
   return dynet::sum(ret);
 }
 
