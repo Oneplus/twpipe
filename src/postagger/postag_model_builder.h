@@ -14,6 +14,8 @@ struct PostagModelBuilder {
     kCharacterLSTMPostagModel,
     kCharacterGRUPostagCRFModel,
     kCharacterLSTMPostagCRFModel,
+    kCharacterCNNGRUPostagModel,
+    kCharacterCNNLSTMPostagModel,
     kCharacterClusterGRUPostagModel,
     kCharacterClusterLSTMPostagModel,
     kWordGRUPostagModel,

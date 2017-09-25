@@ -1,6 +1,7 @@
 #include "postag_model_builder.h"
 #include "char_rnn_postag_model.h"
 #include "char_rnn_crf_postag_model.h"
+#include "char_cnn_rnn_postag_model.h"
 // #include "char_rnn_wcluster_postag_model.h"
 #include "word_rnn_postag_model.h"
 #include "word_char_rnn_postag_model.h"
@@ -14,6 +15,8 @@ template<> const char* CharacterGRUPostagModel::name = "CharacterGRUPostagModel"
 template<> const char* CharacterLSTMPostagModel::name = "CharacterLSTMPostagModel";
 template<> const char* CharacterGRUCRFPostagModel::name = "CharacterGRUCRFPostagModel";
 template<> const char* CharacterLSTMCRFPostagModel::name = "CharacterLSTMCRFPostagModel";
+template<> const char* CharacterCNNGRUPostagModel::name = "CharacterCNNGRUPostagModel";
+template<> const char* CharacterCNNLSTMPostagModel::name = "CharacterCNNLSTMPostagModel";
 // template<> const char* CharacterGRUWithClusterPostagModel::name = "CharacterGRUWithClusterPostagModel";
 // template<> const char* CharacterLSTMWithClusterPostagModel::name = "CharacterLSTMWithClusterPostagModel";
 template<> const char* WordGRUPostagModel::name = "WordGRUPostagModel";
@@ -60,6 +63,14 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
   } else if (model_type == kCharacterLSTMPostagCRFModel) {
     engine = new CharacterLSTMCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
                                              char_n_layers, embed_dim, word_hidden_dim,
+                                             word_n_layers, pos_dim);
+  } else if (model_type == kCharacterCNNGRUPostagModel) {
+    engine = new CharacterCNNGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                            embed_dim, word_hidden_dim,
+                                            word_n_layers, pos_dim);
+  } else if (model_type == kCharacterCNNLSTMPostagModel) {
+    engine = new CharacterCNNLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
+                                             embed_dim, word_hidden_dim,
                                              word_n_layers, pos_dim);
   } else if (model_type == kCharacterClusterGRUPostagModel) {
     /*engine = new CharacterGRUWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
@@ -217,6 +228,10 @@ PostagModelBuilder::ModelType PostagModelBuilder::get_model_type(const std::stri
     ret = kCharacterGRUPostagModel;
   } else if (model_name == "char-lstm") {
     ret = kCharacterLSTMPostagModel;
+  } else if (model_name == "char-cnn-gru") {
+    ret = kCharacterCNNGRUPostagModel;
+  } else if (model_name == "char-cnn-lstm") {
+    ret = kCharacterCNNLSTMPostagModel;
   } else if (model_name == "char-gru-crf") {
     ret = kCharacterGRUPostagCRFModel;
   } else if (model_name == "char-lstm-crf") {

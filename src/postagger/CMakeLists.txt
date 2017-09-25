@@ -7,6 +7,7 @@ add_library (twpipe_postagger
     postag_model.cc
     postag_model_builder.h
     postag_model_builder.cc
+    char_cnn_rnn_postag_model.h
     char_rnn_postag_model.h
     char_rnn_crf_postag_model.h
     char_rnn_wcluster_postag_model.h

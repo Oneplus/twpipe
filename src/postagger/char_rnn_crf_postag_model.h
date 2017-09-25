@@ -151,8 +151,8 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
       }
     }
 
-    std::vector<std::vector<float>> alpha(n_words, std::vector<float>(pos_size));
-    std::vector<std::vector<unsigned>> path(n_words, std::vector<unsigned>(pos_size));
+    std::vector<std::vector<float>> alpha(n_words, std::vector<float>(pos_size, -1e10f));
+    std::vector<std::vector<unsigned>> path(n_words, std::vector<unsigned>(pos_size, root_pos_id));
 
     for (unsigned i = 0; i < n_words; ++i) {
       for (unsigned t = 0; t < pos_size; ++t) {
@@ -161,10 +161,10 @@ struct CharacterRNNCRFPostagModel : public PostagModel {
           path[i][t] = root_pos_id;
           continue;
         }
-
-        for (unsigned pt = 0; pt < pos_size; ++pt) {
+        alpha[i][t] = alpha[i - 1][0] + emit_matrix[i][t] + tran_matrix[0][t];
+        for (unsigned pt = 1; pt < pos_size; ++pt) {
           float score = alpha[i - 1][pt] + emit_matrix[i][t] + tran_matrix[pt][t];
-          if (pt == 0 || score > alpha[i][t]) {
+          if (score > alpha[i][t]) {
             alpha[i][t] = score;
             path[i][t] = pt;
           }

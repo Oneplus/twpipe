@@ -290,7 +290,7 @@ float SupervisedTrainer::train_full_tree(const InputUnits& input_units,
   engine.destropy_checkpoint(checkpoint);
   float ret = 0.f;
   if (!loss.empty()) {
-    dynet::Expression l = dynet::sum(loss) + lambda_ * engine.l2() * loss.size();
+    dynet::Expression l = dynet::sum(loss) + (0.5f * lambda_ * loss.size()) * engine.l2();
     ret = dynet::as_scalar(cg.forward(l));
     cg.backward(l);
     trainer->update();
@@ -547,7 +547,7 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
   engine.destropy_checkpoint(checkpoint);
   float ret = 0.f;
   if (!loss.empty()) {
-    dynet::Expression l = -dynet::sum(loss) + lambda_ * engine.l2() * loss.size();
+    dynet::Expression l = -dynet::sum(loss) + (0.5f * lambda_ * loss.size()) * engine.l2();
     ret = dynet::as_scalar(cg.forward(l));
     cg.backward(l);
     trainer->update();
