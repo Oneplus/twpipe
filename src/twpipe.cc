@@ -344,7 +344,7 @@ int main(int argc, char* argv[]) {
             gold_postags.push_back(data[3]);
           }
           if (load_parse_model) {
-            gold_heads.push_back(boost::lexical_cast<unsigned>(data[6]));
+            gold_heads.push_back(data[6] == "_" ? 0 : boost::lexical_cast<unsigned>(data[6]));
             gold_deprels.push_back(data[7]);
           }
         }

@@ -125,6 +125,13 @@ void PostagModelBuilder::to_json() {
       { "char-hidden-dim", std::to_string(char_hidden_dim) },
       { "char-n-layers", std::to_string(char_n_layers) }
     });
+  } else if (model_type == kCharacterCNNGRUPostagModel ||
+             model_type == kCharacterCNNLSTMPostagModel) {
+    Model::get()->to_json(Model::kPostaggerName, {
+      { "n-chars", std::to_string(char_size) },
+      { "char-dim", std::to_string(char_dim) },
+      { "char-hidden-dim", std::to_string(char_hidden_dim) },
+    });
   } else {
     Model::get()->to_json(Model::kPostaggerName, {
       { "n-words", std::to_string(word_size) },
@@ -173,6 +180,21 @@ PostagModel * PostagModelBuilder::from_json(dynet::ParameterCollection & model) 
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-hidden-dim"));
     char_n_layers =
       boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-n-layers"));
+  }
+  if (model_type == kCharacterCNNGRUPostagModel ||
+      model_type == kCharacterCNNLSTMPostagModel) {
+    temp_size =
+      boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "n-chars"));
+    if (char_size == 0) {
+      char_size = temp_size;
+    } else {
+      BOOST_ASSERT_MSG(char_size == temp_size, "[postag|model_builder] char-size mismatch!");
+    }
+
+    char_dim =
+      boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-dim"));
+    char_hidden_dim =
+      boost::lexical_cast<unsigned>(globals->from_json(Model::kPostaggerName, "char-hidden-dim"));
   }
   if (model_type == kWordCharacterGRUPostagModel ||
       model_type == kWordCharacterLSTMPostagModel ||

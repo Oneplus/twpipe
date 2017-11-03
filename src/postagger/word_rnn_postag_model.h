@@ -40,7 +40,7 @@ struct WordRNNPostagModel : public PostagModel {
     word_embed(model, word_size, word_dim),
     pos_embed(model, AlphabetCollection::get()->pos_map.size(), pos_dim),
     embed_input(embed_dim),
-    dense1(model, word_hidden_dim + word_hidden_dim + pos_dim, word_hidden_dim),
+    dense1(model, word_hidden_dim * 2 + pos_dim, word_hidden_dim),
     dense2(model, word_hidden_dim, AlphabetCollection::get()->pos_map.size()),
     word_size(word_size),
     word_dim(word_dim),
@@ -104,10 +104,9 @@ struct WordRNNPostagModel : public PostagModel {
     Alphabet & pos_map = AlphabetCollection::get()->pos_map;
 
     unsigned n_words = words.size();
-    std::vector<dynet::Expression> word_reprs(n_words);
-    word_rnn.add_inputs(word_reprs);
+    initialize(words);
+
     tags.resize(n_words);
-    std::vector<float> temp_scores;
     unsigned prev_label = root_pos_id;
     for (unsigned i = 0; i < n_words; ++i) {
       dynet::Expression feature = get_feature(i, prev_label);

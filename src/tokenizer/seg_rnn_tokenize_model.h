@@ -11,7 +11,7 @@ template <class RNNBuilderType>
 struct SegmentalRNNTokenizeModel : public TokenizeModel {
   const static char* name;
   BiRNNLayer<RNNBuilderType> bi_rnn;
-  SegBiEmbedding<RNNBuilderType> seg_rnn;
+  SegBiRNN<RNNBuilderType> seg_rnn;
   BinnedDurationEmbedding dur_embed;
   SymbolEmbedding char_embed;
   Merge2Layer merge;
@@ -37,7 +37,7 @@ struct SegmentalRNNTokenizeModel : public TokenizeModel {
                             unsigned dur_dim) :
     TokenizeModel(model),
     bi_rnn(model, n_layers, char_dim, hidden_dim),
-    seg_rnn(model, n_layers, hidden_dim, seg_dim),
+    seg_rnn(model, n_layers, hidden_dim, seg_dim, 15),
     dur_embed(model, dur_dim),
     char_embed(model, char_size, char_dim),
     merge(model, hidden_dim, hidden_dim, hidden_dim),
@@ -97,7 +97,7 @@ struct SegmentalRNNTokenizeModel : public TokenizeModel {
     for (unsigned ri = 0; ri < segmentation.size(); ++ri) {
       BOOST_ASSERT_MSG(cur < n_chars, "[tokenize|model] segment index greater than sentence length.");
       unsigned dur = segmentation[ri];
-      if (max_seg_len && dur > max_seg_len) {
+      if (dur > max_seg_len) {
         _ERROR << "[tokenize|model] max_seg_len=" << max_seg_len << " but reference duration is " << dur;
         abort();
       }
@@ -120,7 +120,7 @@ struct SegmentalRNNTokenizeModel : public TokenizeModel {
     for (unsigned i = 0; i < len; ++i) {
       c[i] = dynet::rectify(merge.get_output(hiddens1[i].first, hiddens1[i].second));
     }
-    seg_rnn.construct_chart(c, max_seg_len);
+    seg_rnn.construct_chart(c);
 
     // f is the expression of overall matrix, fr is the expression of reference.
     std::vector<dynet::Expression> alpha(len + 1), ref_alpha(len + 1);
