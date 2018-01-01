@@ -62,6 +62,7 @@ void ArcStandard::right_unsafe(State& state,
 unsigned ArcStandard::cost(const State& state,
                            const std::vector<unsigned>& ref_heads,
                            const std::vector<unsigned>& ref_deprels) const {
+  // TODO: since twpipe left-rooted, we need re-write the cost function, but it's yet be done.
   // handling the initial state.
   // ref_heads is counted as [0, ... , N], the index of the first legal word is 0.
   // there is a guard in state.stack and state.buffer and the indices in the state
@@ -167,7 +168,7 @@ void ArcStandard::get_transition_costs(const State & state,
                                        const std::vector<unsigned>& ref_deprels,
                                        std::vector<float>& costs) {
   float c = static_cast<float>(cost(state, ref_heads, ref_deprels));
-  float wrong_left = -1e8, wrong_right = -1e8;
+  float wrong_left = -1e8f, wrong_right = -1e8f;
   costs.clear();
 
   for (unsigned act : actions) {
@@ -236,7 +237,8 @@ bool ArcStandard::is_valid_action(const State& state, const unsigned& act) const
     if (state.buffer.size() == 1) { return false; }
   } else {
     if (state.stack.size() < 3) { return false; }
-    if (state.buffer.size() == 1 && !is_right(act)) { /*rule for pseudo root.*/ return false; }
+    /* should not left the root. */
+    if (is_left(act) && state.stack[state.stack.size() - 2] == 0) { return false; }
   }
   return true;
 }

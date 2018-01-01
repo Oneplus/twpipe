@@ -523,7 +523,6 @@ float SupervisedEnsembleTrainer::train_full_tree(const InputUnits & input_units,
   const std::vector<unsigned> & actions = ensemble_instance.categories;
   const std::vector<std::vector<float>> & probs = ensemble_instance.probs;
 
-  unsigned illegal_action = sys.num_actions();
   unsigned n_actions = 0;
   while (!state.terminated()) {
     std::vector<unsigned> valid_actions;
