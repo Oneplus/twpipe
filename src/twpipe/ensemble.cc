@@ -9,8 +9,10 @@ const char* EnsembleInstance::id_name = "id";
 const char* EnsembleInstance::category_name = "category";
 const char* EnsembleInstance::prob_name = "prob";
 
-EnsembleInstance::EnsembleInstance(std::vector<unsigned>& categories,
+EnsembleInstance::EnsembleInstance(unsigned id,
+                                   std::vector<unsigned>& categories,
                                    std::vector<std::vector<float>>& probs) :
+  id(id),
   categories(categories),
   probs(probs) {
 }
@@ -26,7 +28,7 @@ void EnsembleUtils::load_ensemble_instances(const std::string & path,
     std::vector<unsigned> actions = payload.at(EnsembleInstance::category_name).get<std::vector<unsigned>>();
     std::vector<std::vector<float>> probs = payload.at(EnsembleInstance::prob_name).get<std::vector<std::vector<float>>>();
 
-    instances.insert(std::make_pair(id, EnsembleInstance(actions, probs)));
+    instances.push_back(EnsembleInstance(id, actions, probs));
   }
 }
 

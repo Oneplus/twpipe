@@ -12,14 +12,16 @@ struct EnsembleInstance {
   static const char* category_name;
   static const char* prob_name;
 
+  unsigned id;
   std::vector<unsigned> categories;
   std::vector<std::vector<float>> probs;
 
-  EnsembleInstance(std::vector<unsigned> & categories,
+  EnsembleInstance(unsigned id,
+                   std::vector<unsigned> & categories,
                    std::vector<std::vector<float>> & probs);
 };
 
-typedef std::unordered_map<unsigned, EnsembleInstance> EnsembleInstances;
+typedef std::vector<EnsembleInstance> EnsembleInstances;
 
 struct EnsembleUtils {
   static void load_ensemble_instances(const std::string & path,

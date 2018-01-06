@@ -449,11 +449,11 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
   dynet::Trainer * trainer = opt_builder.build(model);
 
   std::vector<unsigned> order;
-  bool allow_nonprojective = engine.sys.allow_nonprojective();
-  for (auto & payload : ensemble_instances) {
-    unsigned id = payload.first;
+  // bool allow_nonprojective = engine.sys.allow_nonprojective();
+  for (unsigned i = 0; i < ensemble_instances.size(); ++i) {
+    unsigned id = ensemble_instances[i].id;
     if (corpus.training_data.count(id) == 0) { continue; }
-    order.push_back(id);
+    order.push_back(i);
   }
 
   float llh = 0.f;
@@ -465,9 +465,10 @@ void SupervisedEnsembleTrainer::train(Corpus & corpus,
     llh = 0.f;
     std::shuffle(order.begin(), order.end(), (*dynet::rndeng));
 
-    for (unsigned sid : order) {
+    for (unsigned id : order) {
+      const EnsembleInstance & inst = ensemble_instances.at(id);
+      unsigned sid = inst.id;
       InputUnits & units = corpus.training_data.at(sid).input_units;
-      const EnsembleInstance & inst = ensemble_instances.at(sid);
 
       noisifier.noisify(units);
       float lp = train_full_tree(units, inst, trainer);
