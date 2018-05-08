@@ -19,8 +19,12 @@ add_library (twpipe_utils
     cluster.cc
     normalizer.h
     normalizer.cc
-	ensemble.h
-	ensemble.cc
-	math.h
-	math.cc
+    ensemble.h
+    ensemble.cc
+    math.h
+    math.cc
+    unicode.h
+    unicode.cc
     )
+
+target_link_libraries(twpipe_utils ${LIBS})

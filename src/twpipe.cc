@@ -33,6 +33,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
 
   po::options_description running_opts("Running options");
   running_opts.add_options()
+    ("segment-and-tokenize", "perform sentence split and tokenization.")
     ("tokenize", "perform tokenization")
     ("postag", "perform tagging")
     ("parse", "perform parsing")
@@ -43,7 +44,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
   po::options_description embed_opts = twpipe::WordEmbedding::get_options();
   po::options_description cluster_opts = twpipe::WordCluster::get_options();
   po::options_description training_opts = twpipe::Trainer::get_options();
-  po::options_description tokenizer_opts = twpipe::TokenizeModel::get_options();
+  po::options_description tokenizer_opts = twpipe::AbstractTokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
   po::options_description postagger_ensemble_train_opts = twpipe::PostaggerEnsembleTrainer::get_options();
   po::options_description parser_opts = twpipe::ParseModel::get_options();
@@ -119,9 +120,8 @@ int main(int argc, char* argv[]) {
 
     twpipe::OptimizerBuilder opt_builder(conf);
 
-    if (conf["train-tokenizer"].as<bool>() == true) {
+    if (conf["train-tokenizer"].as<bool>()) {
       _INFO << "[twpipe] going to train tokenizer.";
-      
       dynet::ParameterCollection model;
 
       twpipe::TokenizeModelBuilder builder(conf);
@@ -130,8 +130,19 @@ int main(int argc, char* argv[]) {
       twpipe::TokenizeModel * engine = builder.build(model);
       twpipe::TokenizerTrainer trainer(*engine, opt_builder, conf);
       trainer.train(corpus);
+    } else if (conf["train-segmentor-and-tokenizer"].as<bool>()) {
+      _INFO << "[twpipe] going to train sentence segmentor and tokenizer.";
+      dynet::ParameterCollection model;
+
+      twpipe::SentenceSegmentAndTokenizeModelBuilder builder(conf);
+      builder.to_json();
+
+      twpipe::SentenceSegmentAndTokenizeModel * engine = builder.build(model);
+      twpipe::TokenizerTrainer trainer(*engine, opt_builder, conf);
+      trainer.train(corpus);
     }
-    if (conf["train-postagger"].as<bool>() == true) {
+
+    if (conf["train-postagger"].as<bool>()) {
       _INFO << "[twpipe] going to train postagger.";
 
       dynet::ParameterCollection model;
@@ -152,7 +163,7 @@ int main(int argc, char* argv[]) {
         trainer.train(corpus, instances);
       }
     }
-    if (conf["train-parser"].as<bool>() == true) {
+    if (conf["train-parser"].as<bool>()) {
       _INFO << "[twpipe] going to train parser.";
 
       dynet::ParameterCollection model;
@@ -182,14 +193,18 @@ int main(int argc, char* argv[]) {
 
     if (conf["format"].as<std::string>() == "plain") {
       twpipe::TokenizeModel * tok_engine = nullptr;
+      twpipe::SentenceSegmentAndTokenizeModel * seg_tok_engine = nullptr;
       twpipe::PostagModel * pos_engine = nullptr;
       twpipe::ParseModel * par_engine = nullptr;
         
       dynet::ParameterCollection tok_model;
+      dynet::ParameterCollection seg_tok_model;
       dynet::ParameterCollection pos_model;
       dynet::ParameterCollection par_model;
 
-      bool load_tokenize_model = (conf.count("tokenize") || conf.count("postag") || conf.count("parse"));
+      bool load_segment_and_tokenize_model = (conf.count("segment-and-tokenize") ||
+        conf.count("postag") || conf.count("parse"));
+      bool load_tokenize_model = (conf.count("tokenize") > 0);
       bool load_postag_model = (conf.count("postag") || conf.count("parse"));
       bool load_parse_model = (conf.count("parse") > 0);
 
@@ -200,7 +215,15 @@ int main(int argc, char* argv[]) {
         }
         twpipe::TokenizeModelBuilder tok_builder(conf);
         tok_engine = tok_builder.from_json(tok_model);
-      } 
+      }
+      if (load_segment_and_tokenize_model) {
+        if (!twpipe::Model::get()->has_segmentor_and_tokenizer_model()) {
+          _ERROR << "[twpipe] doesn't have sentence split and tokenizer model!";
+          exit(1);
+        }
+        twpipe::SentenceSegmentAndTokenizeModelBuilder sent_tok_builder(conf);
+        seg_tok_engine = sent_tok_builder.from_json(seg_tok_model);
+      }
       if (load_postag_model) {
         if (!twpipe::Model::get()->has_postagger_model()) {
           _ERROR << "[twpipe] doesn't have postagger model!";
@@ -222,30 +245,45 @@ int main(int argc, char* argv[]) {
       std::ifstream ifs(conf["input-file"].as<std::string>());
       while (std::getline(ifs, buffer)) {
         boost::algorithm::trim(buffer);
-        std::vector<std::string> tokens;
-        std::vector<std::string> postags;
-        std::vector<unsigned> heads;
-        std::vector<std::string> deprels;
-        if (tok_engine != nullptr) {
+        if (seg_tok_engine != nullptr) {
+          std::vector<std::vector<std::string>> sentences;
+          seg_tok_engine->sentsegment_and_tokenize(buffer, sentences);
+
+          std::vector<std::string> postags;
+          std::vector<unsigned> heads;
+          std::vector<std::string> deprels;
+
+          for (unsigned s = 0; s < sentences.size(); ++s) {
+            const std::vector<std::string> & tokens = sentences[s];
+
+            if (pos_engine != nullptr) {
+              pos_engine->postag(tokens, postags);
+            }
+            if (par_engine != nullptr) {
+              par_engine->predict(tokens, postags, heads, deprels);
+            }
+            if (s == 0) {
+              std::cout << "# text = " << buffer << "\n";
+            }
+            std::cout << "# sent_id = " << s + 1 << "\n";
+            for (unsigned i = 0; i < tokens.size(); ++i) {
+              std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
+                        << (pos_engine != nullptr ? postags[i] : "_") << "\t_\t_\t"
+                        << (par_engine != nullptr ? std::to_string(heads[i]) : "_") << "\t"
+                        << (par_engine != nullptr ? deprels[i] : "_") << "\t_\t_\n";
+            }
+            std::cout << "\n";
+          }
+        } else if (tok_engine != nullptr) {
+          std::vector<std::string> tokens;
           tok_engine->tokenize(buffer, tokens);
-        }
 
-        if (pos_engine != nullptr) {
-          pos_engine->postag(tokens, postags);
+          std::cout << "# text = " << buffer << "\n";
+          for (unsigned i = 0; i < tokens.size(); ++i) {
+            std::cout << i + 1 << "\t" << tokens[i] << "\t_\t_\t_\t_\t_\t_\t_\t_\n";
+          }
+          std::cout << "\n";
         }
-
-        if (par_engine != nullptr) {
-          par_engine->predict(tokens, postags, heads, deprels);
-        }
-
-        std::cout << "# text = " << buffer << "\n";
-        for (unsigned i = 0; i < tokens.size(); ++i) {
-          std::cout << i + 1 << "\t" << tokens[i] << "\t_\t"
-                    << (pos_engine != nullptr ? postags[i] : "_") << "\t_\t"
-                    << (par_engine != nullptr ? std::to_string(heads[i]) : "_") << "\t"
-                    << (par_engine != nullptr ? deprels[i] : "_") << "\t_\t_\n";
-        }
-        std::cout << "\n";
       }
     } else {
       // for conll format, tokenization is impossible.
@@ -281,6 +319,7 @@ int main(int argc, char* argv[]) {
       std::vector<unsigned> heads, gold_heads;
       std::vector<std::string> deprels, gold_deprels;
       std::string sentence;
+      std::string header;
       std::string buffer;
       std::ifstream ifs(conf["input-file"].as<std::string>());
       float n_pos_corr = 0.f;
@@ -302,7 +341,10 @@ int main(int argc, char* argv[]) {
             par_engine->predict(tokens, postags, heads, deprels);
           }
 
-          std::cout << "# text = " << sentence << "\n";
+          boost::algorithm::trim(header);
+          if (!header.empty()) {
+            std::cout << header << "\n";
+          }
           for (unsigned i = 0; i < tokens.size(); ++i) {
             std::cout << i + 1 << "\t" << tokens[i] << "\t_\t";
             if (pos_engine == nullptr) {
@@ -327,6 +369,7 @@ int main(int argc, char* argv[]) {
           std::cout << "\n";
 
           tokens.clear();
+          header = "";
           if (load_postag_model || load_parse_model) {
             postags.clear(); gold_postags.clear();
           }
@@ -335,7 +378,7 @@ int main(int argc, char* argv[]) {
             deprels.clear(); gold_deprels.clear();
           }
         } else if (buffer[0] == '#') {
-          if (boost::algorithm::starts_with(buffer, "# text = ")) { sentence = buffer.substr(9); }
+          header += "\n" + buffer;
         } else {
           std::vector<std::string> data;
           boost::algorithm::split(data, buffer, boost::is_any_of("\t "));

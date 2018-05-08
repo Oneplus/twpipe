@@ -24,6 +24,7 @@ protected:
 public:
   static const char* kGeneral;
   static const char* kTokenizerName;
+  static const char* kSentenceSegmentAndTokenizeName;
   static const char* kPostaggerName;
   static const char* kParserName;
 
@@ -51,6 +52,8 @@ public:
 
   void from_json(const std::string & phase_name,
                  dynet::ParameterCollection & model);
+
+  bool has_segmentor_and_tokenizer_model() const;
 
   bool has_tokenizer_model() const;
 

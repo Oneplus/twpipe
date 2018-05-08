@@ -13,15 +13,19 @@ namespace po = boost::program_options;
 namespace twpipe {
 
 struct TokenizerTrainer : public Trainer {
-  TokenizeModel & engine;
+  AbstractTokenizeModel & engine;
   OptimizerBuilder & opt_builder;
+  const char* phase_name;
 
-  TokenizerTrainer(TokenizeModel & engine,
+  TokenizerTrainer(AbstractTokenizeModel & engine,
                    OptimizerBuilder & opt_builder,
                    po::variables_map & conf);
 
   void train(const Corpus & corpus);
+
+  float evaluate(const Corpus & corpus);
 };
+
 
 }
 

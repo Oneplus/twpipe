@@ -36,6 +36,7 @@ struct Instance {
 };
 
 unsigned utf8_len(unsigned char x);
+char32_t utf8_to_unicode_first_(const std::string & s);
 
 struct Corpus {
   const static char* UNK;

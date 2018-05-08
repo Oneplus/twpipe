@@ -8,6 +8,7 @@ add_library (twpipe_tokenizer
     tokenize_model_builder.h
     tokenize_model_builder.cc
     lin_rnn_tokenize_model.h
+    lin_rnn_tokenize_model.cc
     seg_rnn_tokenize_model.h
     )
 

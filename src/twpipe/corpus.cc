@@ -200,13 +200,26 @@ void Corpus::load_devel_data(const std::string& filename) {
 }
 
 unsigned utf8_len(unsigned char x) {
-  if (x < 0x80) return 1;
-  else if ((x >> 5) == 0x06) return 2;
-  else if ((x >> 4) == 0x0e) return 3;
-  else if ((x >> 3) == 0x1e) return 4;
-  else if ((x >> 2) == 0x3e) return 5;
-  else if ((x >> 1) == 0x7e) return 6;
-  else abort();
+  if (0 == (0x80 & x))         { return 1; }
+  else if (0xc0 == (0xe0 & x)) { return 2; }
+  else if (0xe0 == (0xf0 & x)) { return 3; }
+  else if (0xf0 == (0xf8 & x)) { return 4; }
+  else if (0xf8 == (0xfc & x)) { return 5; }
+  else if (0xfc == (0xfe & x)) { return 6; }
+  assert(false);
+}
+
+char32_t utf8_to_unicode_first_(const std::string & s) {
+  char32_t wc = 0;
+  unsigned char c = s[0];
+  if ((c & 0x80) == 0) { wc = c; }
+  else if ((c & 0xE0) == 0xC0) { wc = (s[0] & 0x1F) << 6; wc |= (s[1] & 0x3F); }
+  else if ((c & 0xF0) == 0xE0) { wc = (s[0] & 0xF) << 12; wc |= (s[1] & 0x3F) << 6;  wc |= (s[2] & 0x3F); }
+  else if ((c & 0xF8) == 0xF0) { wc = (s[0] & 0x7) << 18; wc |= (s[1] & 0x3F) << 12; wc |= (s[2] & 0x3F) << 6;  wc |= (s[3] & 0x3F); }
+  else if ((c & 0xFC) == 0xF8) { wc = (s[0] & 0x3) << 24; wc |= (s[0] & 0x3F) << 18; wc |= (s[0] & 0x3F) << 12; wc |= (s[0] & 0x3F) << 6;  wc |= (s[0] & 0x3F); }
+  else if ((c & 0xFE) == 0xFC) { wc = (s[0] & 0x1) << 30; wc |= (s[0] & 0x3F) << 24; wc |= (s[0] & 0x3F) << 18; wc |= (s[0] & 0x3F) << 12; wc |= (s[0] & 0x3F) << 6; wc |= (s[0] & 0x3F); }
+  else { assert(false); }
+  return wc;
 }
 
 // id form lemma cpos pos feat head deprel phead pdeprel
@@ -306,7 +319,7 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
     }
   }
   if (inst.raw_sentence == "") {
-    inst.raw_sentence = guessed_raw_sentence;
+    inst.raw_sentence = boost::algorithm::trim_copy(guessed_raw_sentence);
   }
 }
 

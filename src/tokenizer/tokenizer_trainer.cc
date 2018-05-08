@@ -4,16 +4,37 @@
 
 namespace twpipe {
 
-TokenizerTrainer::TokenizerTrainer(TokenizeModel & engine,
+TokenizerTrainer::TokenizerTrainer(AbstractTokenizeModel & engine,
                                    OptimizerBuilder & opt_builder,
                                    po::variables_map & conf) :
   Trainer(conf),
   engine(engine),
   opt_builder(opt_builder) {
+  if (conf["train-segmentor-and-tokenizer"].as<bool>()) {
+    phase_name = Model::kSentenceSegmentAndTokenizeName;
+  } else {
+    phase_name = Model::kTokenizerName;
+  }
+}
+
+float twpipe::TokenizerTrainer::evaluate(const Corpus & corpus) {
+  float n_recall = 0, n_pred = 0, n_gold = 0;
+  for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
+    const Instance & inst = corpus.devel_data.at(sid);
+
+    auto payload = engine.evaluate(inst);
+    n_recall += std::get<0>(payload);
+    n_pred += std::get<1>(payload);
+    n_gold += std::get<2>(payload);
+  }
+  float p = n_recall / n_gold;
+  float r = n_recall / n_pred;
+  float f = 2 * p * r / (p + r);
+  return f;
 }
 
 void twpipe::TokenizerTrainer::train(const Corpus & corpus) {
-  _INFO << "[tokenize|train] training tokenizer model";
+  _INFO << "[tokenize|train] training " << phase_name << " model";
   _INFO << "[tokenize|train] size of dataset = " << corpus.n_train;
 
   std::vector<unsigned> order(corpus.n_train);
@@ -23,8 +44,9 @@ void twpipe::TokenizerTrainer::train(const Corpus & corpus) {
 
   dynet::Trainer * trainer = opt_builder.build(engine.model);
 
-  float eta0 = trainer->learning_rate;
   float best_f = 0.f;
+  unsigned n_processed = 0;
+
   for (unsigned iter = 1; iter <= max_iter; ++iter) {
     std::shuffle(order.begin(), order.end(), *dynet::rndeng);
     _INFO << "[tokenize|train] start training at " << iter << "-th iteration.";
@@ -32,48 +54,48 @@ void twpipe::TokenizerTrainer::train(const Corpus & corpus) {
     float loss = 0;
     for (unsigned sid = 0; sid < corpus.n_train; ++sid) {
       const Instance & inst = corpus.training_data.at(order[sid]);
+      {
+        dynet::ComputationGraph cg;
+        engine.new_graph(cg);
+        dynet::Expression loss_expr = engine.objective(inst);
+        if (lambda_ > 0) {
+          loss_expr = loss_expr + (0.5f * lambda_ * inst.input_units.size()) * engine.l2();
+        }
+        float l = dynet::as_scalar(cg.forward(loss_expr));
+        cg.backward(loss_expr);
+        loss += l;
 
-      dynet::ComputationGraph cg;
-      engine.new_graph(cg);
-      dynet::Expression loss_expr = engine.objective(inst);
-      float l = dynet::as_scalar(cg.forward(loss_expr));
-      cg.backward(loss_expr);
-      loss += l;
-
-      trainer->update();
-    }
-    _INFO << "[tokenize|train] loss = " << loss;
-
-    float n_recall = 0, n_pred = 0, n_gold = 0;
-    for (unsigned sid = 0; sid < corpus.n_devel; ++sid) {
-      const Instance & inst = corpus.devel_data.at(sid);
-
-      dynet::ComputationGraph cg;
-      engine.new_graph(cg);
-      std::vector<std::string> result;
-      engine.decode(inst.raw_sentence, result);
-
-      std::vector<std::string> gold;
-      for (unsigned i = 1; i < inst.input_units.size(); ++i) {
-        gold.push_back(inst.input_units[i].word);
+        trainer->update();
+        n_processed++;
       }
-      auto payload = engine.evaluate(gold, result);
-      n_recall += std::get<0>(payload);
-      n_pred += std::get<1>(payload);
-      n_gold += std::get<2>(payload);
+      if (need_evaluate(iter, n_processed)) {
+        float f = evaluate(corpus);
+        float prop = static_cast<float>(n_processed) / order.size();
+        if (f > best_f) {
+          _INFO << "[tokenize|train] " << prop << "% trained, fscore on heldout = " << f
+                << ", new best achieved, saved.";
+          best_f = f;
+          Model::get()->to_json(phase_name, engine.model);
+        } else {
+          _INFO << "[tokenize|train] " << prop << "% trained, fscore on heldout = " << f;
+        }
+      }
     }
-
-    float f = 2 * n_recall / (n_pred + n_gold);
-    _INFO << "[tokenize|train] iteration " << iter << ", f-score = " << f;
-
-    if (f > best_f) {
-      best_f = f;
-      _INFO << "[tokenize|train] new record achieved " << best_f << ", model saved.";
-      Model::get()->to_json(Model::kTokenizerName, engine.model);
+    _INFO << "[tokenize|train] end of iter #" << iter << ", loss=" << loss;
+    if (need_evaluate(iter)) {
+      float f = evaluate(corpus);
+      if (f > best_f) {
+        _INFO << "[tokenize|train] end of iter #" << iter << ", fscore on heldout = " << f
+              << ", new best achieved, saved.";
+        best_f = f;
+        Model::get()->to_json(phase_name, engine.model);
+      } else {
+        _INFO << "[tokenize|train] end of iter #" << iter << ", fscore on heldout = " << f;
+      }
     }
-    trainer->learning_rate = eta0 / (1. + static_cast<float>(iter) * 0.08);
+    opt_builder.update(trainer, iter);
   }
-
+  _INFO << "[tokenize|train] training is done, best fscore is: " << best_f;
   delete trainer;
 }
 

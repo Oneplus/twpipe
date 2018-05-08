@@ -42,3 +42,11 @@ add_executable (generate_parse_ensemble_data
     ensemble_generator.cc)
 
 target_link_libraries (generate_parse_ensemble_data ${LIBS} twpipe_parser twpipe_utils)
+
+add_executable (test_from test_from.cc tester.cc tester.h)
+
+target_link_libraries (test_from ${LIBS} twpipe_parser twpipe_utils)
+
+add_executable (sample_from sample_from.cc sampler.cc sampler.h)
+
+target_link_libraries (sample_from ${LIBS} twpipe_parser twpipe_utils)

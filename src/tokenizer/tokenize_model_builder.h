@@ -25,13 +25,35 @@ struct TokenizeModelBuilder {
   unsigned seg_dim;
   unsigned dur_dim;
 
-  TokenizeModelBuilder(po::variables_map & conf);
+  explicit TokenizeModelBuilder(po::variables_map & conf);
 
   TokenizeModel * build(dynet::ParameterCollection & model);
 
   void to_json();
 
   TokenizeModel * from_json(dynet::ParameterCollection & model);
+};
+
+struct SentenceSegmentAndTokenizeModelBuilder {
+  enum ModelType {
+    kLinearGRUSentenceSegmentAndTokenizeModel,
+    kLinearLSTMSentenceSegmentAndTokenizeModel,
+  };
+
+  ModelType model_type;
+  std::string model_name;
+  unsigned char_size;
+  unsigned char_dim;
+  unsigned hidden_dim;
+  unsigned n_layers;
+
+  explicit SentenceSegmentAndTokenizeModelBuilder(po::variables_map & conf);
+
+  SentenceSegmentAndTokenizeModel * build(dynet::ParameterCollection & model);
+
+  void to_json();
+
+  SentenceSegmentAndTokenizeModel * from_json(dynet::ParameterCollection & model);
 };
 
 }

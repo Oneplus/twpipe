@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
   } else {
     twpipe::WordEmbedding::get()->empty(conf["embedding-dim"].as<unsigned>());
   }
-  
+
   std::string payload = conf["models"].as<std::string>();
   std::vector<std::string> model_names;
   boost::split(model_names, payload, boost::is_any_of(","));

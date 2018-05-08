@@ -6,12 +6,14 @@ namespace twpipe {
 
 const char* Model::kGeneral = "general";
 const char* Model::kTokenizerName = "tokenizer";
+const char* Model::kSentenceSegmentAndTokenizeName = "sentsegmentor_and_tokenizer";
 const char* Model::kPostaggerName = "postagger";
 const char* Model::kParserName = "parser";
 
 Model* Model::instance = nullptr;
 
 Model::Model() {
+  payload[kSentenceSegmentAndTokenizeName] = nullptr;
   payload[kTokenizerName] = nullptr;
   payload[kPostaggerName] = nullptr;
   payload[kParserName] = nullptr;
@@ -122,6 +124,10 @@ void Model::from_json(const std::string & phase_name,
   }
 }
 
+bool Model::has_segmentor_and_tokenizer_model() const {
+  return !payload[kSentenceSegmentAndTokenizeName].is_null();
+}
+
 bool Model::has_tokenizer_model() const {
   return !payload[kTokenizerName].is_null();
 }
@@ -135,12 +141,10 @@ bool Model::has_parser_model() const {
 }
 
 bool Model::valid_phase_name(const std::string & phase_name) {
-  if (phase_name == kTokenizerName ||
-      phase_name == kPostaggerName ||
-      phase_name == kParserName) {
-    return true;
-  }
-  return false;
+  return phase_name == kTokenizerName ||
+    phase_name == kSentenceSegmentAndTokenizeName ||
+    phase_name == kPostaggerName ||
+    phase_name == kParserName;
 }
 
 }

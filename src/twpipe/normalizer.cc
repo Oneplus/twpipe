@@ -38,7 +38,7 @@ std::string GloveNormalizer::normalize(const std::string & word) {
   return ret;
 }
 
-std::string OwoputiNormalizer::punct_chars("['\"¡°¡±¡®¡¯.?!¡­,:;]");
+std::string OwoputiNormalizer::punct_chars("['\"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.?!ï¿½ï¿½,:;]");
 std::string OwoputiNormalizer::entity("&(?:amp|lt|gt|quot);");
 std::string OwoputiNormalizer::url_start_1("(?:https?://|\bwww\\.)");
 std::string OwoputiNormalizer::common_tlds("(?:com|org|edu|gov|net|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|pro|tel|travel|xxx)");

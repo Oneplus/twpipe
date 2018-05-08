@@ -51,16 +51,14 @@ void PostaggerTrainer::train(const Corpus & corpus) {
       }
       if (need_evaluate(iter, n_processed)) {
         float acc = evaluate(corpus);
+        float prop = static_cast<float>(n_processed) / order.size();
         if (acc > best_acc) {
-          float prop = static_cast<float>(n_processed) / order.size();
-          if (acc > best_acc) {
-            _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc 
+          _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc
               << ", new best achieved, saved.";
-            best_acc = acc;
-            Model::get()->to_json(Model::kPostaggerName, engine.model);
-          } else {
-            _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc;
-          }
+          best_acc = acc;
+          Model::get()->to_json(Model::kPostaggerName, engine.model);
+        } else {
+          _INFO << "[postag|train] " << prop << "% trained, ACC on heldout = " << acc;
         }
       }
     }
