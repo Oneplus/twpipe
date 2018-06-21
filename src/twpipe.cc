@@ -112,11 +112,11 @@ int main(int argc, char* argv[]) {
   if (conf.count("train")) {
     twpipe::Corpus corpus;
     corpus.load_training_data(conf["input-file"].as<std::string>());
-    twpipe::AlphabetCollection::get()->to_json();
 
     if (conf.count("heldout")) {
       corpus.load_devel_data(conf["heldout"].as<std::string>());
     }
+    twpipe::AlphabetCollection::get()->to_json();
 
     twpipe::OptimizerBuilder opt_builder(conf);
 
