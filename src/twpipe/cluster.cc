@@ -13,7 +13,7 @@ WordCluster::WordCluster() {
 }
 
 po::options_description WordCluster::get_options() {
-  po::options_description opts("Embedding options");
+  po::options_description opts("Cluster options");
   opts.add_options()
     ("cluster", po::value<std::string>(), "the path to the cluster file.")
     ;

@@ -340,8 +340,12 @@ bool Swap::is_valid_action(const State& state, const unsigned& act) const {
   if (is_shift && state.buffer.size() == 1) { return false; }
   if (is_swap && (state.stack.size() < 3 || state.buffer.size() == 1)) { return false; }
   if (is_swap && state.stack[state.stack.size() - 2] > state.stack.back()) { return false; }
-  if (is_reduce && state.stack.size() < 3) { return false; }
-  if (state.buffer.size() == 1 && !is_left(act)) { return false; }
+  if (is_reduce) {
+    if (state.stack.size() < 3) { return false; }
+    if (is_left(act) && state.stack[state.stack.size() - 2] == 0) { return false; }
+  }
+  // if (is_reduce && state.stack.size() < 3) { return false; }
+  // if (state.buffer.size() == 1 && !is_right(act)) { return false; }
   return true;
 }
 
