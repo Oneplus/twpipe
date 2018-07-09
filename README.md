@@ -80,10 +80,25 @@ of the parsers as:
 ```
 ./bin/generate_parse_ensemble_data \
     --models ./model1.twpipe,./model2.twpipe./model3.twpipe \
-    ./data/en-ud-tweebank-train.conllu
+    ./data/en-ud-tweebank-train.conllu > en-ud-tweebank-train.actions
 ```
 where different models are separated by comma.
-It will
+It will dump a json formatted data into `stdout`.
+And you can learn a single parser from this data using
+the following commands.
+```
+./bin/twpipe \
+    --dynet-seed 1 \
+    --train \
+    --heldout ./data/en-ud-tweebank-train.conllu \
+    --train-distill-parser true \
+    --parse-ensemble-data ./en-ud-tweebank-train.actions \
+    --optimizer adam \
+    --optimizer-enable-clipping true \
+    --model model.twpipe \
+    --max-iter 10 \
+    ./data/en-ud-tweebank-train.conllu
+```
 
 ## Treebank Concatenation
 
