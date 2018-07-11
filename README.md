@@ -17,6 +17,7 @@ For technique details, please refer our NAACL 2018 paper
 supports by GCC 4.X.
 * MSVC 18.x: I've successfully compiled `twpipe` on MSVC 18. If you got
 any problem, please let me know.
+* boost: we use its `program_options`.
 
 ## Compiling
 

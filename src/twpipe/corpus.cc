@@ -264,7 +264,11 @@ void Corpus::parse_data(const std::string& data, Instance & inst, bool train) {
     } else {
       boost::algorithm::split(tokens, line, boost::is_any_of("\t"), boost::token_compress_on);
       BOOST_ASSERT_MSG(tokens.size() > 6, "[corpus] illegal conllu format, number of column less than 6.");      
-      
+
+      if (tokens[0].find('.') != std::string::npos || tokens[0].find('-') != std::string::npos) {
+        continue;
+      }
+
       if (train) {
         const std::string & word = input_unit.word = tokens[1];
         const std::string & postag = input_unit.postag = tokens[3];
