@@ -30,6 +30,34 @@ mkdir build
 cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/your/eigen3/
 ```
 
+## Testing on Raw Data
+First unzip the released model with
+```
+bunzip2 -k model/en_ewt_en_tweebank_train.model.json.bz2
+```
+
+Then go back to the root directory.
+Suppose your input tweets are stored in the `input_file' witch
+each tweet in one line.
+Run the following comments
+```
+./bin/twpipe --segment-and-tokenize --postag --parse \
+    --model model/en_ewt_en_tweebank_train.model.json input_file
+```
+
+The conllu-formatted output dumped to `stdout`.
+
+### Important Notes
+
+1. The postagger we shipped in `twpipe` is a naive bidirectional
+ LSTM sequence tagger which performs worse than that of
+ Owoputi et al. (2015). We suggest using theirs instead.
+2. We found that also doing sentence segmentation leads to
+ better parsing performance.
+3. Specifying word embeddings with `--embedding ./data/glove.twitter.27B.100d.txt`
+ will lead better performance.
+
+
 ## Training on Tweebank
 
 ```
@@ -46,26 +74,6 @@ cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/your/eigen3/
     --max-iter 10 \
     ./data/en-ud-tweebank-train.conllu
 ```
-
-## Testing on Raw Data
-
-```
-./bin/twpipe --segment-and-tokenize --postag --parse \
-    --model model.twpipe ./data/en-ud-tweebank-test.txt
-```
-
-The conllu-formatted output dumped to `stdout`.
-
-### Important Notes
-
-1. The postagger we shipped in `twpipe` is a naive bidirectional
- LSTM sequence tagger which performs worse than that of
- Owoputi et al. (2015). We suggest using theirs instead.
-2. We found that also doing sentence segmentation leads to
- better parsing performance.
-3. Specifying word embeddings with `--embedding ./data/glove.twitter.27B.100d.txt`
- will lead better performance.
-
 
 ## Training on Ensemble and Distillation
 
@@ -112,9 +120,6 @@ Try it please!
 * Shipping Owoputi's Tagger:
  as pointed in our paper, Owoputi's Tagger is the SOTA twitter parser.
  We would like to ship their tagger within twpipe in the future.
-* Pre-trained Model:
- It will be released in the near future.
-
 
 ## References
 
