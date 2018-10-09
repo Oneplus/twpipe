@@ -37,9 +37,9 @@ bunzip2 -k model/en_ewt_en_tweebank_train.model.json.bz2
 ```
 
 Then go back to the root directory.
-Suppose your input tweets are stored in the `input_file' witch
+Suppose your input tweets are stored in the `input_file' with
 each tweet in one line.
-Run the following comments
+Run the following commands:
 ```
 ./bin/twpipe --segment-and-tokenize --postag --parse \
     --model model/en_ewt_en_tweebank_train.model.json input_file
