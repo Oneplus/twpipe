@@ -14,8 +14,10 @@ struct PostagModel {
 
   dynet::ParameterCollection & model;
   unsigned pos_size;
+  EmbeddingType embedding_type_;
 
-  PostagModel(dynet::ParameterCollection & model);
+  PostagModel(dynet::ParameterCollection & model,
+              EmbeddingType embedding_type = kStaticEmbeddings);
 
   virtual void new_graph(dynet::ComputationGraph & cg) = 0;
 

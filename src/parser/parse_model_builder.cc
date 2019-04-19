@@ -21,6 +21,15 @@ ParseModelBuilder::ParseModelBuilder(po::variables_map & conf) {
                conf["parse-arch"].as<std::string>() :
                std::string("b15"));
 
+  if (conf.count("embeddings")) {
+    embedding_type = kStaticEmbeddings;
+    embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
+  }
+  if (conf.count("elmo")) {
+    embedding_type = kContextualEmbeddings;
+    embed_dim = (conf.count("elmo-dim") ? conf["elmo-dim"].as<unsigned>() : 0);
+  }
+
   char_size = AlphabetCollection::get()->char_map.size();
   word_size = AlphabetCollection::get()->word_map.size();
   pos_size = AlphabetCollection::get()->pos_map.size();
@@ -33,7 +42,6 @@ ParseModelBuilder::ParseModelBuilder(po::variables_map & conf) {
   n_layers = (conf.count("parse-n-layer") ? conf["parse-n-layer"].as<unsigned>() : 0);
   lstm_input_dim = (conf.count("parse-lstm-input-dim") ? conf["parse-lstm-input-dim"].as<unsigned>() : 0);
   hidden_dim = (conf.count("parse-hidden-dim") ? conf["parse-hidden-dim"].as<unsigned>() : 0);
-  embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
 }
 
 ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
@@ -66,7 +74,8 @@ ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
                              n_layers,
                              lstm_input_dim,
                              hidden_dim,
-                             (*system));
+                             (*system),
+                             embedding_type);
 
   } else if (arch_name == "ballesteros15" || arch_name == "b15") {
     parser = new Ballesteros15Model(model,
@@ -82,7 +91,8 @@ ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
                                     n_layers,
                                     lstm_input_dim,
                                     hidden_dim,
-                                    (*system));
+                                    (*system),
+                                    embedding_type);
 
   } else if (arch_name == "kiperwasser16" || arch_name == "k16") {
     parser = new Kiperwasser16Model(model,
@@ -95,7 +105,8 @@ ParseModel * ParseModelBuilder::build(dynet::ParameterCollection & model) {
                                     n_layers,
                                     lstm_input_dim,
                                     hidden_dim,
-                                    (*system));
+                                    (*system),
+                                    embedding_type);
   } else {
     _ERROR << "[parse|model_builder] unknown architecture name: " << arch_name;
     exit(1);

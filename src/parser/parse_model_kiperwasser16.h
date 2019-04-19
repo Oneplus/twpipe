@@ -89,7 +89,8 @@ struct Kiperwasser16Model : public ParseModel {
                                unsigned n_layers,
                                unsigned dim_lstm_in,
                                unsigned dim_hidden,
-                               TransitionSystem& system);
+                               TransitionSystem& system,
+                               EmbeddingType embedding_type);
 
   void new_graph(dynet::ComputationGraph& cg) override;
 

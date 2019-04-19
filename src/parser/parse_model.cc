@@ -58,7 +58,8 @@ void ParseModel::initialize_state(const InputUnits & input, State & state) {
 }
 
 ParseModel::ParseModel(dynet::ParameterCollection & m,
-                       TransitionSystem & s) : model(m), sys(s) {
+                       TransitionSystem & s,
+                       EmbeddingType embedding_type) : model(m), sys(s), embedding_type_(embedding_type) {
 }
 
 void ParseModel::predict(const std::vector<std::string>& words,

@@ -28,6 +28,7 @@ struct ParseModelBuilder {
   unsigned n_layers;
   unsigned lstm_input_dim;
   unsigned hidden_dim;
+  EmbeddingType embedding_type;
 
   ParseModelBuilder(po::variables_map & conf);
 

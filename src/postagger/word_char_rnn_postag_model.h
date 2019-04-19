@@ -5,6 +5,7 @@
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
 #include "dynet_layer/layer.h"
@@ -44,8 +45,9 @@ struct WordCharacterRNNPostagModel : public PostagModel {
                               unsigned embed_dim,
                               unsigned word_hidden_dim,
                               unsigned word_n_layers,
-                              unsigned pos_dim) :
-    PostagModel(model),
+                              unsigned pos_dim,
+                              EmbeddingType embedding_type) :
+    PostagModel(model, embedding_type),
     char_rnn(model, char_n_layers, char_dim, char_hidden_dim, false),
     word_rnn(model, word_n_layers, char_hidden_dim * 2 + word_dim + embed_dim, word_hidden_dim),
     char_embed(model, char_size, char_dim),
@@ -93,7 +95,11 @@ struct WordCharacterRNNPostagModel : public PostagModel {
     Alphabet & char_map = AlphabetCollection::get()->char_map;
 
     std::vector<std::vector<float>> embeddings;
-    WordEmbedding::get()->render(words, embeddings);
+    if (embedding_type_ == kStaticEmbeddings) {
+      WordEmbedding::get()->render(words, embeddings);
+    } else {
+      ELMo::get()->render(words, embeddings);
+    }
 
     unsigned n_words = words.size();
     std::vector<dynet::Expression> word_reprs(n_words);

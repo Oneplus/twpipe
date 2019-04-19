@@ -13,6 +13,8 @@ add_library (twpipe_utils
     trainer.cc
     model.h
     model.cc
+    elmo.h
+    elmo.cc
     embedding.h
     embedding.cc
     cluster.h

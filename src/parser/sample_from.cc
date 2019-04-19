@@ -3,6 +3,7 @@
 #include "dynet/dynet.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 #include "twpipe/model.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/corpus.h"
@@ -64,6 +65,13 @@ int main(int argc, char* argv[]) {
                                        conf["embedding-dim"].as<unsigned>());
   } else {
     twpipe::WordEmbedding::get()->empty(conf["embedding-dim"].as<unsigned>());
+  }
+
+  if (conf.count("elmo")) {
+    twpipe::ELMo::get()->load(conf["elmo"].as<std::string>(),
+                              conf["elmo-dim"].as<unsigned>());
+  } else {
+    twpipe::ELMo::get()->empty(conf["elmo-dim"].as<unsigned>());
   }
 
   std::string payload = conf["models"].as<std::string>();

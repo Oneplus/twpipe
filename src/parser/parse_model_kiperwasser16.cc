@@ -1,6 +1,7 @@
 #include "parse_model_kiperwasser16.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 
 namespace twpipe {
 
@@ -69,8 +70,9 @@ Kiperwasser16Model::Kiperwasser16Model(dynet::ParameterCollection & m,
                                        unsigned n_layers,
                                        unsigned dim_lstm_in,
                                        unsigned dim_hidden,
-                                       TransitionSystem & system) :
-  ParseModel(m, system),
+                                       TransitionSystem & system,
+                                       EmbeddingType embedding_type) :
+  ParseModel(m, system, embedding_type),
   fwd_lstm(n_layers, dim_lstm_in, dim_hidden / 2, m),
   bwd_lstm(n_layers, dim_lstm_in, dim_hidden / 2, m),
   word_emb(m, size_w, dim_w),
@@ -126,10 +128,18 @@ void Kiperwasser16Model::initialize_parser(dynet::ComputationGraph & cg,
 
   std::vector<std::vector<float>> embeddings;
   unsigned len = input.size();
-  std::vector<std::string> words(len);
   // The first unit is pseduo root.
-  for (unsigned i = 0; i < len; ++i) { words[i] = input[i].word; }
-  WordEmbedding::get()->render(words, embeddings);
+  if (embedding_type_ == kStaticEmbeddings) {
+    std::vector<std::string> words(len);
+    for (unsigned i = 0; i < len; ++i) { words[i] = input[i].word; }
+    WordEmbedding::get()->render(words, embeddings);
+  } else {
+    std::vector<std::string> words(len - 1);
+    // It is very tricky here! ELMo doesn't have the _ROOT_ token, so append a zero vector.
+    embeddings.emplace_back(std::vector<float>(ELMo::get()->dim(), 0.f));
+    for (unsigned i = 1; i < len; ++i) { words[i - 1] = input[i].word; }
+    ELMo::get()->render(words, embeddings);
+  }
 
   fwd_lstm.start_new_sequence();
   bwd_lstm.start_new_sequence();

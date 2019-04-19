@@ -10,6 +10,8 @@ namespace po = boost::program_options;
 
 namespace twpipe {
 
+enum EmbeddingType {kStaticEmbeddings, kContextualEmbeddings};
+
 struct InputUnit {
   std::vector<unsigned> cids;  // list of character ID
   unsigned wid;     // form ID

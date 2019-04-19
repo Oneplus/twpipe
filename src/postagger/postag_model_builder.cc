@@ -30,6 +30,15 @@ PostagModelBuilder::PostagModelBuilder(po::variables_map & conf) {
     model_type = get_model_type(model_name);
   }
 
+  if (conf.count("embeddings")) {
+    embedding_type = kStaticEmbeddings;
+    embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
+  }
+  if (conf.count("elmo")) {
+    embedding_type = kContextualEmbeddings;
+    embed_dim = (conf.count("elmo-dim") ? conf["elmo-dim"].as<unsigned>() : 0);
+  }
+
   word_size = AlphabetCollection::get()->word_map.size();
   char_size = AlphabetCollection::get()->char_map.size();
   pos_size = AlphabetCollection::get()->pos_map.size();
@@ -43,7 +52,6 @@ PostagModelBuilder::PostagModelBuilder(po::variables_map & conf) {
   cluster_hidden_dim = (conf.count("pos-cluster-hidden-dim") ? conf["pos-cluster-hidden-dim"].as<unsigned>() : 0);
   cluster_n_layers = (conf.count("pos-cluster-n-layer") ? conf["pos-cluster-n-layer"].as<unsigned>() : 0);
   pos_dim = (conf.count("pos-pos-dim") ? conf["pos-pos-dim"].as<unsigned>() : 0);
-  embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
 }
 
 PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
@@ -51,27 +59,33 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
   if (model_type == kCharacterGRUPostagModel) {
     engine = new CharacterGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
                                          char_n_layers, embed_dim, word_hidden_dim,
-                                         word_n_layers, pos_dim);
+                                         word_n_layers, pos_dim,
+                                         embedding_type);
   } else if (model_type == kCharacterLSTMPostagModel) {
     engine = new CharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
                                           char_n_layers, embed_dim, word_hidden_dim,
-                                          word_n_layers, pos_dim);
+                                          word_n_layers, pos_dim,
+                                          embedding_type);
   } else if (model_type == kCharacterGRUPostagCRFModel) {
     engine = new CharacterGRUCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
                                             char_n_layers, embed_dim, word_hidden_dim,
-                                            word_n_layers, pos_dim);
+                                            word_n_layers, pos_dim,
+                                            embedding_type);
   } else if (model_type == kCharacterLSTMPostagCRFModel) {
     engine = new CharacterLSTMCRFPostagModel(model, char_size, char_dim, char_hidden_dim,
                                              char_n_layers, embed_dim, word_hidden_dim,
-                                             word_n_layers, pos_dim);
+                                             word_n_layers, pos_dim,
+                                             embedding_type);
   } else if (model_type == kCharacterCNNGRUPostagModel) {
     engine = new CharacterCNNGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
                                             embed_dim, word_hidden_dim,
-                                            word_n_layers, pos_dim);
+                                            word_n_layers, pos_dim,
+                                            embedding_type);
   } else if (model_type == kCharacterCNNLSTMPostagModel) {
     engine = new CharacterCNNLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
                                              embed_dim, word_hidden_dim,
-                                             word_n_layers, pos_dim);
+                                             word_n_layers, pos_dim,
+                                             embedding_type);
   } else if (model_type == kCharacterClusterGRUPostagModel) {
     /*engine = new CharacterGRUWithClusterPostagModel(model, char_size, char_dim, char_hidden_dim,
                                                     char_n_layers, embed_dim, word_hidden_dim,
@@ -84,18 +98,22 @@ PostagModel * PostagModelBuilder::build(dynet::ParameterCollection & model) {
                                                      cluster_n_layers, pos_dim);*/
   } else if (model_type == kWordGRUPostagModel) {
     engine = new WordGRUPostagModel(model, word_size, word_dim, embed_dim, 
-                                    word_hidden_dim, word_n_layers, pos_dim);
+                                    word_hidden_dim, word_n_layers, pos_dim,
+                                    embedding_type);
   } else if (model_type == kWordLSTMPostagModel) {
     engine = new WordLSTMPostagModel(model, word_size, word_dim, embed_dim,
-                                     word_hidden_dim, word_n_layers, pos_dim);
+                                     word_hidden_dim, word_n_layers, pos_dim,
+                                     embedding_type);
   } else if (model_type == kWordCharacterGRUPostagModel) {
     engine = new WordCharacterGRUPostagModel(model, char_size, char_dim, char_hidden_dim,
                                              char_n_layers, word_size, word_dim, embed_dim,
-                                             word_hidden_dim, word_n_layers, pos_dim);
+                                             word_hidden_dim, word_n_layers, pos_dim,
+                                             embedding_type);
   } else if (model_type == kWordCharacterLSTMPostagModel) {
     engine = new WordCharacterLSTMPostagModel(model, char_size, char_dim, char_hidden_dim,
                                               char_n_layers, word_size, word_dim, embed_dim,
-                                              word_hidden_dim, word_n_layers, pos_dim);
+                                              word_hidden_dim, word_n_layers, pos_dim,
+                                              embedding_type);
   } else {
     _ERROR << "[postag|model_builder] unknow postag model: " << model_name;
     exit(1);

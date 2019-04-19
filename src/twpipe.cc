@@ -17,6 +17,7 @@
 #include "twpipe/optimizer_builder.h"
 #include "twpipe/trainer.h"
 #include "twpipe/model.h"
+#include "twpipe/elmo.h"
 #include "twpipe/embedding.h"
 #include "twpipe/cluster.h"
 
@@ -42,7 +43,7 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
 
   po::options_description model_opts = twpipe::Model::get_options();
   po::options_description embed_opts = twpipe::WordEmbedding::get_options();
-  po::options_description cluster_opts = twpipe::WordCluster::get_options();
+  po::options_description elmo_opts = twpipe::ELMo::get_options();
   po::options_description training_opts = twpipe::Trainer::get_options();
   po::options_description tokenizer_opts = twpipe::AbstractTokenizeModel::get_options();
   po::options_description postagger_opts = twpipe::PostagModel::get_options();
@@ -61,8 +62,8 @@ void init_command_line(int argc, char* argv[], po::variables_map& conf) {
   cmd.add(generic_opts)
     .add(running_opts)
     .add(model_opts)
+    .add(elmo_opts)
     .add(embed_opts)
-    .add(cluster_opts)
     .add(training_opts)
     .add(tokenizer_opts)
     .add(postagger_opts)
@@ -103,10 +104,11 @@ int main(int argc, char* argv[]) {
     twpipe::WordEmbedding::get()->empty(conf["embedding-dim"].as<unsigned>());
   }
 
-  if (conf.count("cluster")) {
-    twpipe::WordCluster::get()->load(conf["cluster"].as<std::string>());
+  if (conf.count("elmo")) {
+    twpipe::ELMo::get()->load(conf["elmo"].as<std::string>(),
+                              conf["elmo-dim"].as<unsigned>());
   } else {
-    twpipe::WordCluster::get()->empty();
+    twpipe::ELMo::get()->empty(conf["elmo-dim"].as<unsigned>());
   }
 
   if (conf.count("train")) {

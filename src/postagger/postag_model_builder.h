@@ -25,6 +25,7 @@ struct PostagModelBuilder {
   };
 
   ModelType model_type;
+  EmbeddingType embedding_type;
   std::string model_name;
   unsigned word_size;
   unsigned word_dim;

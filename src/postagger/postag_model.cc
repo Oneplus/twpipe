@@ -21,9 +21,11 @@ po::options_description PostagModel::get_options() {
   return model_opts;
 }
 
-PostagModel::PostagModel(dynet::ParameterCollection & model) :
+PostagModel::PostagModel(dynet::ParameterCollection & model,
+  EmbeddingType embedding_type) :
   model(model),
-  pos_size(AlphabetCollection::get()->pos_map.size()) {
+  pos_size(AlphabetCollection::get()->pos_map.size()),
+  embedding_type_(embedding_type) {
 }
 
 void PostagModel::postag(const std::vector<std::string>& words) {

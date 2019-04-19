@@ -3,6 +3,7 @@
 #include "dynet/dynet.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 #include "twpipe/trainer.h"
 #include "twpipe/model.h"
 #include "twpipe/alphabet_collection.h"
@@ -26,6 +27,7 @@ void init_commnad_line(int argc, char* argv[], po::variables_map & conf) {
     ;
 
   po::options_description embed_opts = twpipe::WordEmbedding::get_options();
+  po::options_description elmo_opts = twpipe::ELMo::get_options();
   po::options_description ensemble_opts = twpipe::EnsemblePostagDataGenerator::get_options();
 
   po::positional_options_description input_opts;
@@ -65,6 +67,13 @@ int main(int argc, char* argv[]) {
                                        conf["embedding-dim"].as<unsigned>());
   } else {
     twpipe::WordEmbedding::get()->empty(conf["embedding-dim"].as<unsigned>());
+  }
+
+  if (conf.count("elmo")) {
+    twpipe::ELMo::get()->load(conf["elmo"].as<std::string>(),
+                              conf["elmo-dim"].as<unsigned>());
+  } else {
+    twpipe::ELMo::get()->empty(conf["elmo-dim"].as<unsigned>());
   }
 
   std::string payload = conf["models"].as<std::string>();

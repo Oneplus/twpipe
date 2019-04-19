@@ -3,6 +3,7 @@
 #include "twpipe/logging.h"
 #include "twpipe/alphabet_collection.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 
 namespace twpipe {
 
@@ -12,7 +13,11 @@ PostaggerTrainer::PostaggerTrainer(PostagModel & engine,
   Trainer(conf),
   engine(engine),
   opt_builder(opt_builder) {
-  dim = WordEmbedding::get()->dim();
+  if (engine.embedding_type_ == kStaticEmbeddings) {
+    dim = WordEmbedding::get()->dim();
+  } else {
+    dim = ELMo::get()->dim();
+  }
 }
 
 void PostaggerTrainer::train(const Corpus & corpus) {

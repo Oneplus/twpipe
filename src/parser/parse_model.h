@@ -24,8 +24,11 @@ struct ParseModel {
 
   dynet::ParameterCollection & model;
   TransitionSystem & sys;
+  EmbeddingType embedding_type_;
 
-  ParseModel(dynet::ParameterCollection & m, TransitionSystem& s);
+  ParseModel(dynet::ParameterCollection & m,
+             TransitionSystem& s,
+             EmbeddingType embedding_type);
 
   void predict(const std::vector<std::string> & words,
                const std::vector<std::string> & postags,

@@ -7,6 +7,7 @@
 #include "twpipe/corpus.h"
 #include "twpipe/logging.h"
 #include "twpipe/embedding.h"
+#include "twpipe/elmo.h"
 #include "twpipe/alphabet_collection.h"
 #include <vector>
 #include <random>
@@ -211,8 +212,9 @@ Ballesteros15Model::Ballesteros15Model(dynet::ParameterCollection & m,
                                        unsigned n_layers,
                                        unsigned dim_lstm_in,
                                        unsigned dim_hidden,
-                                       TransitionSystem& system) :
-  ParseModel(m, system),
+                                       TransitionSystem& system,
+                                       EmbeddingType embedding_type) :
+  ParseModel(m, system, embedding_type),
   fwd_ch_lstm(1, dim_c, dim_w, m),  /* We mannually fix the n-layers of char lstm to 1. */
   bwd_ch_lstm(1, dim_c, dim_w, m),
   s_lstm(n_layers, dim_lstm_in, dim_hidden, m),
@@ -346,10 +348,18 @@ void Ballesteros15Model::initialize_parser(dynet::ComputationGraph & cg,
 
   std::vector<std::vector<float>> embeddings;
   unsigned len = input.size();
-  std::vector<std::string> words(len);
   // The first unit is pseduo root.
-  for (unsigned i = 0; i < len; ++i) { words[i] = input[i].word; }
-  WordEmbedding::get()->render(words, embeddings);
+  if (embedding_type_ == kStaticEmbeddings) {
+    std::vector<std::string> words(len);
+    for (unsigned i = 0; i < len; ++i) { words[i] = input[i].word; }
+    WordEmbedding::get()->render(words, embeddings);
+  } else {
+    std::vector<std::string> words(len - 1);
+    // It is very tricky here! ELMo doesn't have the _ROOT_ token, so append a zero vector.
+    embeddings.emplace_back(std::vector<float>(ELMo::get()->dim(), 0.f));
+    for (unsigned i = 1; i < len; ++i) { words[i - 1] = input[i].word; }
+    ELMo::get()->render(words, embeddings);
+  }
 
   s_lstm.start_new_sequence();
   q_lstm.start_new_sequence();
