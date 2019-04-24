@@ -27,6 +27,7 @@ void init_commnad_line(int argc, char* argv[], po::variables_map & conf) {
     ;
 
   po::options_description embed_opts = twpipe::WordEmbedding::get_options();
+  po::options_description elmo_opts = twpipe::ELMo::get_options();
   po::options_description ensemble_opts = twpipe::EnsembleParseDataGenerator::get_options();
 
   po::positional_options_description input_opts;
@@ -35,6 +36,7 @@ void init_commnad_line(int argc, char* argv[], po::variables_map & conf) {
   po::options_description cmd("Usage: ./twpipe_ensemble_generator [running_opts] input_file");
   cmd.add(generic_opts)
     .add(embed_opts)
+    .add(elmo_opts)
     .add(ensemble_opts)
     ;
 
