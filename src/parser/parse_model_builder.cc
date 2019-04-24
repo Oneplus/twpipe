@@ -21,7 +21,7 @@ ParseModelBuilder::ParseModelBuilder(po::variables_map & conf) {
                conf["parse-arch"].as<std::string>() :
                std::string("b15"));
 
-  if (conf.count("embeddings")) {
+  if (conf.count("embedding")) {
     embedding_type = kStaticEmbeddings;
     embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
   }

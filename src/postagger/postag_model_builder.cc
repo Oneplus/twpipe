@@ -30,7 +30,7 @@ PostagModelBuilder::PostagModelBuilder(po::variables_map & conf) {
     model_type = get_model_type(model_name);
   }
 
-  if (conf.count("embeddings")) {
+  if (conf.count("embedding")) {
     embedding_type = kStaticEmbeddings;
     embed_dim = (conf.count("embedding-dim") ? conf["embedding-dim"].as<unsigned>() : 0);
   }
